@@ -23,4 +23,9 @@ public interface UserService {
      * 修改密码
      */
     Object changePassword(ChangePasswordRequest changePasswordRequest);
+    
+    /**
+     * 退出登录
+     */
+    Object logout();
 }

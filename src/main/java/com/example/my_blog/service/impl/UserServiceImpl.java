@@ -170,4 +170,12 @@ public class UserServiceImpl implements UserService {
             return ApiResponse.error("密码修改失败：" + e.getMessage());
         }
     }
+
+    @Override
+    public Object logout() {
+        // JWT 无状态认证，退出登录只需前端删除 Token
+        // 服务端不需要额外操作，直接返回成功即可
+        log.info("用户退出登录成功");
+        return ApiResponse.success(null);
+    }
 }

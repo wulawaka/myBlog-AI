@@ -20,6 +20,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(loginInterceptor)
                 .addPathPatterns(
                         "/api/user/change-password",
+                        "/api/user/logout",
                         "/api/article/**",
                         "/api/category/main-tag",
                         "/api/category/sub-tag",

@@ -51,13 +51,23 @@ public class UserController {
      * 修改密码接口
      * @param username 用户名（必填，用于身份验证）
      * @param email 邮箱（必填，用于身份验证）
-     * @param oldPassword 旧密码（必填，至少6位，用于验证身份）
-     * @param newPassword 新密码（必填，至少6位，将替换旧密码）
-     * @return 密码修改结果JSON
+     * @param oldPassword 旧密码（必填，至少 6 位，用于验证身份）
+     * @param newPassword 新密码（必填，至少 6 位，将替换旧密码）
+     * @return 密码修改结果 JSON
      */
     @PostMapping("/change-password")
     public Object changePassword(@Valid @RequestBody ChangePasswordRequest changePasswordRequest) {
         log.info("收到密码修改请求，用户名：{}", changePasswordRequest.getUsername());
         return userService.changePassword(changePasswordRequest);
+    }
+
+    /**
+     * 退出登录接口
+     * @return 退出结果 JSON
+     */
+    @PostMapping("/logout")
+    public Object logout() {
+        log.info("收到退出登录请求");
+        return userService.logout();
     }
 }
