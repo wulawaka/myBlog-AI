@@ -21,6 +21,7 @@ public class ArticleResponse {
     private LocalDateTime updatedAt;
     
     private UserInfo userInfo;
+    private String scategoryId;
 
     @Data
     public static class UserInfo {

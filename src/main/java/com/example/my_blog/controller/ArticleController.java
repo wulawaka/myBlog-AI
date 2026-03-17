@@ -22,13 +22,14 @@ public class ArticleController {
     /**
      * 创建文章接口
      * @param userId 用户 ID（必填）
-     * @param categoryId 分类 ID（必填）
+     * @param categoryId 分类 ID（必填，必须是主标签 parent_id=0）
      * @param title 文章标题（必填，最多 200 字符）
      * @param summary 文章概述（必填，最多 500 字符）
      * @param content 文章内容（必填）
      * @param isTop 是否置顶（可选，默认 0-否，1-是）
      * @param isDraft 是否草稿（可选，默认 0-已发布，1-草稿）
      * @param isDeleted 是否删除（可选，默认 0-否，1-是）
+     * @param scategoryId 子标签ID 字符串（可选，逗号分隔，最多 5 个）
      * @return 创建结果 JSON
      */
     @PostMapping

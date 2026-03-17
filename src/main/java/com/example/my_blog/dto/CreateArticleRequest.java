@@ -33,4 +33,6 @@ public class CreateArticleRequest {
     private Integer isDraft = 0;
 
     private Integer isDeleted = 0;
+
+    private String scategoryId;
 }
