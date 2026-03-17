@@ -3,6 +3,8 @@ package com.example.my_blog.service.impl;
 import com.example.my_blog.common.ApiResponse;
 import com.example.my_blog.dto.CreateArticleRequest;
 import com.example.my_blog.dto.ArticleResponse;
+import com.example.my_blog.dto.ArticleListRequest;
+import com.example.my_blog.dto.ArticleListItem;
 import com.example.my_blog.entity.Article;
 import com.example.my_blog.entity.User;
 import com.example.my_blog.entity.Category;
@@ -14,8 +16,14 @@ import com.example.my_blog.repository.ArticleCategoryRelationRepository;
 import com.example.my_blog.service.ArticleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * 文章服务实现类
@@ -109,6 +117,62 @@ public class ArticleServiceImpl implements ArticleService {
             log.error("创建文章异常", e);
             return ApiResponse.error("创建文章失败：" + e.getMessage());
         }
+    }
+
+    @Override
+    public Object getArticleList(ArticleListRequest request) {
+        try {
+            // 创建分页对象
+            PageRequest pageRequest = PageRequest.of(
+                request.getPageNum() - 1, 
+                request.getPageSize()
+            );
+            
+            // 分页查询未删除且已发布的文章
+            Page<Article> articlePage = articleRepository.findByIsDeletedAndIsDraftOrderByUpdatedAtDesc(0, 0, pageRequest);
+            
+            // 构建返回结果
+            List<ArticleListItem> list = articlePage.getContent().stream()
+                    .map(this::convertToArticleListItem)
+                    .collect(Collectors.toList());
+            
+            // 构建分页响应
+            Map<String, Object> result = new HashMap<>();
+            result.put("list", list);
+            result.put("total", articlePage.getTotalElements());
+            result.put("pageNum", request.getPageNum());
+            result.put("pageSize", request.getPageSize());
+            result.put("totalPages", articlePage.getTotalPages());
+            
+            return ApiResponse.success(result);
+            
+        } catch (Exception e) {
+            log.error("获取文章列表异常", e);
+            return ApiResponse.error("获取文章列表失败：" + e.getMessage());
+        }
+    }
+    
+    /**
+     * 将 Article 转换为 ArticleListItem
+     */
+    private ArticleListItem convertToArticleListItem(Article article) {
+        ArticleListItem item = new ArticleListItem();
+        item.setId(article.getId());
+        item.setUserId(article.getUserId());
+        item.setCategoryId(article.getCategoryId());
+        item.setTitle(article.getTitle());
+        item.setSummary(article.getSummary());
+        item.setIsTop(article.getIsTop());
+        item.setUpdatedAt(article.getUpdatedAt());
+        
+        // 获取子标签ID 列表
+        List<ArticleCategoryRelation> relations = articleCategoryRelationRepository.findByArticleId(article.getId());
+        String subCategoryIds = relations.stream()
+                .map(relation -> relation.getCategoryId().toString())
+                .collect(Collectors.joining(","));
+        item.setSubCategoryIds(subCategoryIds);
+        
+        return item;
     }
 
     /**

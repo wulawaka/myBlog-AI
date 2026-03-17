@@ -1,6 +1,7 @@
 package com.example.my_blog.controller;
 
 import com.example.my_blog.dto.CreateArticleRequest;
+import com.example.my_blog.dto.ArticleListRequest;
 import com.example.my_blog.service.ArticleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +35,19 @@ public class ArticleController {
      */
     @PostMapping
     public Object createArticle(@Valid @RequestBody CreateArticleRequest request) {
-        log.info("收到创建文章请求，标题：{}，用户ID：{}", request.getTitle(), request.getUserId());
+        log.info("收到创建文章请求，标题：{}，用户 ID：{}", request.getTitle(), request.getUserId());
         return articleService.createArticle(request);
+    }
+    
+    /**
+     * 分页获取文章列表接口
+     * @param pageNum 页码（可选，默认 1）
+     * @param pageSize 每页数量（可选，默认 10）
+     * @return 文章列表 JSON
+     */
+    @GetMapping("/list")
+    public Object getArticleList(ArticleListRequest request) {
+        log.info("收到获取文章列表请求，页码：{}，每页数量：{}", request.getPageNum(), request.getPageSize());
+        return articleService.getArticleList(request);
     }
 }
