@@ -175,6 +175,41 @@ public class ArticleServiceImpl implements ArticleService {
         return item;
     }
 
+    @Override
+    public Object deleteArticle(Long articleId, Long currentUserId) {
+        try {
+            // 查询文章
+            Optional<Article> articleOptional = articleRepository.findById(articleId);
+            
+            if (articleOptional.isEmpty()) {
+                return ApiResponse.error("文章不存在");
+            }
+
+            Article article = articleOptional.get();
+            
+            // 检查文章是否已被删除
+            if (article.getIsDeleted().equals(1)) {
+                return ApiResponse.error("文章已被删除");
+            }
+            
+            // 校验权限：只能删除自己的文章
+            if (!article.getUserId().equals(currentUserId)) {
+                return ApiResponse.error("无权删除该文章");
+            }
+
+            // 执行软删除
+            article.setIsDeleted(1);
+            articleRepository.save(article);
+
+            log.info("文章 {} 被用户 {} 删除", article.getTitle(), currentUserId);
+            return ApiResponse.success(null);
+
+        } catch (Exception e) {
+            log.error("删除文章异常", e);
+            return ApiResponse.error("删除文章失败：" + e.getMessage());
+        }
+    }
+
     /**
      * 构建文章响应对象
      */

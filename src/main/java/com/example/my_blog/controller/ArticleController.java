@@ -3,6 +3,7 @@ package com.example.my_blog.controller;
 import com.example.my_blog.dto.CreateArticleRequest;
 import com.example.my_blog.dto.ArticleListRequest;
 import com.example.my_blog.service.ArticleService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,5 +50,19 @@ public class ArticleController {
     public Object getArticleList(ArticleListRequest request) {
         log.info("收到获取文章列表请求，页码：{}，每页数量：{}", request.getPageNum(), request.getPageSize());
         return articleService.getArticleList(request);
+    }
+
+    /**
+     * 删除文章接口
+     * @param id 文章 ID（路径参数）
+     * @param request HTTP 请求（用于获取当前登录用户 ID）
+     * @return 删除结果 JSON
+     */
+    @DeleteMapping("/{id}")
+    public Object deleteArticle(@PathVariable Long id, HttpServletRequest request) {
+        // 从 request 上下文中获取当前登录用户 ID（由拦截器设置）
+        Long currentUserId = (Long) request.getAttribute("userId");
+        log.info("收到删除文章请求，文章 ID：{}，当前用户 ID：{}", id, currentUserId);
+        return articleService.deleteArticle(id, currentUserId);
     }
 }

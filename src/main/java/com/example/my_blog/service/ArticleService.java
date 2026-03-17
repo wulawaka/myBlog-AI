@@ -17,4 +17,9 @@ public interface ArticleService {
      * 分页获取文章列表
      */
     Object getArticleList(ArticleListRequest request);
+    
+    /**
+     * 删除文章
+     */
+    Object deleteArticle(Long articleId, Long currentUserId);
 }
