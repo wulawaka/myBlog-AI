@@ -30,12 +30,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable) // 禁用CSRF保护
+            .csrf(AbstractHttpConfigurer::disable) // 禁用 CSRF 保护
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/api/user/login", "/api/user/register", "/api/user/change-password").permitAll() // 允许用户相关接口
-                .requestMatchers("/api/category/**").permitAll() // 允许分类相关接口
-                .requestMatchers("/api/article/**").permitAll() // 允许文章相关接口
-                .anyRequest().authenticated() // 其他请求需要认证
+                .anyRequest().permitAll() // 所有请求都允许访问（由 JWT 拦截器控制）
             );
         return http.build();
     }

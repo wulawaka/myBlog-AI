@@ -7,6 +7,7 @@ import com.example.my_blog.dto.ChangePasswordRequest;
 import com.example.my_blog.entity.User;
 import com.example.my_blog.repository.UserRepository;
 import com.example.my_blog.service.UserService;
+import com.example.my_blog.util.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
     @Override
     public Object login(LoginRequest loginRequest) {
@@ -54,9 +56,15 @@ public class UserServiceImpl implements UserService {
             userInfo.put("username", user.getUsername());
             userInfo.put("nickname", user.getNickname());
             userInfo.put("email", user.getEmail());
+            
+            // 生成 JWT Token
+            String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
             log.info("用户 {} 登录成功", user.getUsername());
-            return ApiResponse.success(userInfo);
+            return ApiResponse.custom(200, "登录成功", Map.of(
+                "userInfo", userInfo,
+                "token", token
+            ));
 
         } catch (Exception e) {
             log.error("登录异常", e);
