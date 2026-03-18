@@ -2,6 +2,8 @@ package com.example.my_blog.repository;
 
 import com.example.my_blog.entity.ArticleCategoryRelation;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -20,4 +22,14 @@ public interface ArticleCategoryRelationRepository extends JpaRepository<Article
      * 根据文章 ID 删除所有关联记录
      */
     void deleteByArticleId(Long articleId);
+    
+    /**
+     * 根据文章 ID 列表和子标签 ID 列表查找匹配的文章 ID（去重）
+     */
+    @Query("SELECT DISTINCT r.articleId FROM ArticleCategoryRelation r " +
+           "WHERE r.articleId IN :articleIds AND r.categoryId IN :subCategoryIds")
+    List<Long> findArticleIdsBySubCategoryIdsIn(
+        @Param("articleIds") List<Long> articleIds,
+        @Param("subCategoryIds") List<Long> subCategoryIds
+    );
 }

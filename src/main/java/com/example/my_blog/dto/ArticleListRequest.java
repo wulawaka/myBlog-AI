@@ -22,4 +22,14 @@ public class ArticleListRequest {
      * 大标签 ID 列表（可选，逗号分隔的字符串，如 "1,2,3"）
      */
     private String categoryIds;
+    
+    /**
+     * 主标签 ID（可选，单个，用于与子标签联动筛选）
+     */
+    private Long categoryId;
+    
+    /**
+     * 子标签 ID 列表（可选，逗号分隔的字符串，如 "2,3,4"）
+     */
+    private String scategoryIds;
 }

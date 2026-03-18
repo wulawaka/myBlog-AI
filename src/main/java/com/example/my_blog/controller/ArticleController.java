@@ -46,12 +46,15 @@ public class ArticleController {
      * @param pageNum 页码（可选，默认 1）
      * @param pageSize 每页数量（可选，默认 10）
      * @param categoryIds 大标签 ID 列表（可选，逗号分隔的字符串，如 "1,2,3"）
+     * @param categoryId 主标签 ID（可选，单个，用于与子标签联动筛选）
+     * @param scategoryIds 子标签 ID 列表（可选，逗号分隔的字符串，如 "2,3,4"）
      * @return 文章列表 JSON
      */
     @GetMapping("/list")
     public Object getArticleList(ArticleListRequest request) {
-        log.info("收到获取文章列表请求，页码：{}，每页数量：{}，分类 IDs: {}", 
-                 request.getPageNum(), request.getPageSize(), request.getCategoryIds());
+        log.info("收到获取文章列表请求，页码：{}，每页数量：{}，分类 IDs: {}, 主标签 ID: {}, 子标签 IDs: {}", 
+                 request.getPageNum(), request.getPageSize(), 
+                 request.getCategoryIds(), request.getCategoryId(), request.getScategoryIds());
         return articleService.getArticleList(request);
     }
 

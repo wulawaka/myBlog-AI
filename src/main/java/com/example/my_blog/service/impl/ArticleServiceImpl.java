@@ -124,7 +124,7 @@ public class ArticleServiceImpl implements ArticleService {
     @Override
     public Object getArticleList(ArticleListRequest request) {
         try {
-            // 解析 categoryIds 参数
+            // 解析 categoryIds 参数（多个主标签筛选）
             List<Long> categoryIdList = null;
             
             if (request.getCategoryIds() != null && !request.getCategoryIds().trim().isEmpty()) {
@@ -160,6 +160,79 @@ public class ArticleServiceImpl implements ArticleService {
                 }
             }
             
+            // 解析主标签 ID 和子标签 ID 列表（联动筛选）
+            Long mainCategoryId = request.getCategoryId();
+            List<Long> subCategoryIdList = null;
+            
+            if (request.getScategoryIds() != null && !request.getScategoryIds().trim().isEmpty()) {
+                String[] subIds = request.getScategoryIds().split(",");
+                subCategoryIdList = new ArrayList<>();
+                
+                for (String subId : subIds) {
+                    try {
+                        Long subCid = Long.parseLong(subId.trim());
+                        subCategoryIdList.add(subCid);
+                        log.info("解析子标签 ID: {} -> {}", subId, subCid);
+                    } catch (NumberFormatException e) {
+                        return ApiResponse.error("子标签 ID 格式不正确：" + subId);
+                    }
+                }
+                
+                if (subCategoryIdList.isEmpty()) {
+                    return ApiResponse.error("子标签 ID 列表不能为空");
+                }
+                
+                log.info("最终解析的子标签 ID 列表：{}", subCategoryIdList);
+            } else {
+                log.info("未传入子标签参数或为空字符串");
+            }
+            
+            // 验证主标签和子标签的有效性（如果传入了）
+            if (mainCategoryId != null) {
+                Optional<Category> mainCategoryOpt = categoryRepository.findById(mainCategoryId);
+                if (mainCategoryOpt.isEmpty()) {
+                    return ApiResponse.error("主标签不存在，ID: " + mainCategoryId);
+                }
+                
+                Category mainCategory = mainCategoryOpt.get();
+                if (!mainCategory.getParentId().equals(0L)) {
+                    return ApiResponse.error("主标签必须是主分类，ID: " + mainCategoryId);
+                }
+                
+                // 如果传入了子标签，验证子标签
+                if (subCategoryIdList != null && !subCategoryIdList.isEmpty()) {
+                    // 先获取该主标签下的所有子标签 ID
+                    List<Category> allSubCategories = categoryRepository.findByParentId(mainCategoryId);
+                    List<Long> validSubCategoryIds = allSubCategories.stream()
+                        .map(Category::getId)
+                        .collect(Collectors.toList());
+                    
+                    log.info("主标签 {} 下的所有子标签 ID 列表：{}", mainCategoryId, validSubCategoryIds);
+                    
+                    // 验证传入的子标签是否都属于该主标签
+                    for (Long subCategoryId : subCategoryIdList) {
+                        Optional<Category> subCategoryOpt = categoryRepository.findById(subCategoryId);
+                        if (subCategoryOpt.isEmpty()) {
+                            return ApiResponse.error("子标签不存在，ID: " + subCategoryId);
+                        }
+                        
+                        Category subCategory = subCategoryOpt.get();
+                        if (subCategory.getParentId().equals(0L)) {
+                            return ApiResponse.error("子标签不能是主分类，ID: " + subCategoryId);
+                        }
+                        
+                        // 关键校验：检查子标签是否属于当前主标签
+                        if (!subCategory.getParentId().equals(mainCategoryId)) {
+                            return ApiResponse.error(
+                                String.format("子标签 ID %d 不属于主标签 ID %d，其所属主标签 ID 为 %d", 
+                                    subCategoryId, mainCategoryId, subCategory.getParentId()));
+                        }
+                    }
+                    
+                    log.info("主标签 {} 和子标签 {} 校验通过", mainCategoryId, subCategoryIdList);
+                }
+            }
+            
             // 创建分页对象
             PageRequest pageRequest = PageRequest.of(
                 request.getPageNum() - 1, 
@@ -169,13 +242,80 @@ public class ArticleServiceImpl implements ArticleService {
             // 根据是否有分类筛选执行不同的查询
             Page<Article> articlePage;
             
-            if (categoryIdList != null && !categoryIdList.isEmpty()) {
-                // 有多个分类筛选：查询 article.category_id 在给定列表中的文章
+            // 优先处理主标签 + 子标签联动筛选
+            // 注意：必须同时满足主标签不为 null，且子标签列表真正有值
+            if (mainCategoryId != null && request.getScategoryIds() != null 
+                && !request.getScategoryIds().trim().isEmpty() 
+                && subCategoryIdList != null && !subCategoryIdList.isEmpty()) {
+                
+                log.info("进入主标签 + 子标签联动筛选模式，主标签 ID: {}, 子标签 ID 列表：{}", 
+                         mainCategoryId, subCategoryIdList);
+                
+                // 模式：主标签 + 子标签联动
+                // 第一步：查询符合主标签的所有文章 ID
+                List<Article> articlesByMainCategory = articleRepository.findByCategoryIdAndIsDeletedAndIsDraft(
+                    mainCategoryId, 0, 0
+                );
+                
+                log.info("主标签 {} 下的文章总数：{}", mainCategoryId, articlesByMainCategory.size());
+                
+                if (articlesByMainCategory.isEmpty()) {
+                    // 如果没有符合主标签的文章，直接返回空结果
+                    List<ArticleListItem> emptyList = new ArrayList<>();
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("list", emptyList);
+                    result.put("total", 0L);
+                    result.put("pageNum", request.getPageNum());
+                    result.put("pageSize", request.getPageSize());
+                    result.put("totalPages", 0);
+                    return ApiResponse.success(result);
+                }
+                
+                // 第二步：获取这些文章的 ID 列表
+                List<Long> articleIds = articlesByMainCategory.stream()
+                    .map(Article::getId)
+                    .collect(Collectors.toList());
+                
+                log.info("主标签 {} 下的文章 ID 列表：{}", mainCategoryId, articleIds);
+                
+                // 第三步：在关联表中查找包含指定子标签的文章 ID
+                List<Long> matchedArticleIds = articleCategoryRelationRepository.findArticleIdsBySubCategoryIdsIn(
+                    articleIds, subCategoryIdList
+                );
+                
+                log.info("匹配子标签 {} 的文章 ID 列表：{}", subCategoryIdList, matchedArticleIds);
+                
+                if (matchedArticleIds.isEmpty()) {
+                    // 如果没有匹配的文章，直接返回空结果
+                    List<ArticleListItem> emptyList = new ArrayList<>();
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("list", emptyList);
+                    result.put("total", 0L);
+                    result.put("pageNum", request.getPageNum());
+                    result.put("pageSize", request.getPageSize());
+                    result.put("totalPages", 0);
+                    return ApiResponse.success(result);
+                }
+                
+                // 第四步：根据匹配的文章 ID 分页查询
+                articlePage = articleRepository.findByIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+                    matchedArticleIds, 0, 0, pageRequest
+                );
+                
+            } else if (mainCategoryId != null) {
+                // 模式：只按主标签筛选
+                articlePage = articleRepository.findByCategoryIdAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+                    mainCategoryId, 0, 0, pageRequest
+                );
+                
+            } else if (categoryIdList != null && !categoryIdList.isEmpty()) {
+                // 模式：按多个主标签筛选（兼容之前的功能）
                 articlePage = articleRepository.findByCategoryIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
                     categoryIdList, 0, 0, pageRequest
                 );
+                
             } else {
-                // 无筛选条件：使用原始查询
+                // 模式：无筛选条件
                 articlePage = articleRepository.findByIsDeletedAndIsDraftOrderByUpdatedAtDesc(0, 0, pageRequest);
             }
             
