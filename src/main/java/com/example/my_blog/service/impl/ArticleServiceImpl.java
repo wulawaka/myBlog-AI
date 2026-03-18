@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 /**
@@ -123,14 +124,60 @@ public class ArticleServiceImpl implements ArticleService {
     @Override
     public Object getArticleList(ArticleListRequest request) {
         try {
+            // 解析 categoryIds 参数
+            List<Long> categoryIdList = null;
+            
+            if (request.getCategoryIds() != null && !request.getCategoryIds().trim().isEmpty()) {
+                String[] ids = request.getCategoryIds().split(",");
+                categoryIdList = new ArrayList<>();
+                
+                for (String id : ids) {
+                    try {
+                        Long cid = Long.parseLong(id.trim());
+                        categoryIdList.add(cid);
+                    } catch (NumberFormatException e) {
+                        return ApiResponse.error("分类 ID 格式不正确：" + id);
+                    }
+                }
+                
+                if (categoryIdList.isEmpty()) {
+                    return ApiResponse.error("分类 ID 列表不能为空");
+                }
+            }
+            
+            // 如果传入了 categoryId，验证其有效性
+            if (categoryIdList != null) {
+                for (Long categoryId : categoryIdList) {
+                    Optional<Category> categoryOpt = categoryRepository.findById(categoryId);
+                    if (categoryOpt.isEmpty()) {
+                        return ApiResponse.error("分类不存在，ID: " + categoryId);
+                    }
+                    
+                    Category category = categoryOpt.get();
+                    if (!category.getParentId().equals(0L)) {
+                        return ApiResponse.error("分类必须是主标签，ID: " + categoryId);
+                    }
+                }
+            }
+            
             // 创建分页对象
             PageRequest pageRequest = PageRequest.of(
                 request.getPageNum() - 1, 
                 request.getPageSize()
             );
             
-            // 分页查询未删除且已发布的文章
-            Page<Article> articlePage = articleRepository.findByIsDeletedAndIsDraftOrderByUpdatedAtDesc(0, 0, pageRequest);
+            // 根据是否有分类筛选执行不同的查询
+            Page<Article> articlePage;
+            
+            if (categoryIdList != null && !categoryIdList.isEmpty()) {
+                // 有多个分类筛选：查询 article.category_id 在给定列表中的文章
+                articlePage = articleRepository.findByCategoryIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+                    categoryIdList, 0, 0, pageRequest
+                );
+            } else {
+                // 无筛选条件：使用原始查询
+                articlePage = articleRepository.findByIsDeletedAndIsDraftOrderByUpdatedAtDesc(0, 0, pageRequest);
+            }
             
             // 构建返回结果
             List<ArticleListItem> list = articlePage.getContent().stream()

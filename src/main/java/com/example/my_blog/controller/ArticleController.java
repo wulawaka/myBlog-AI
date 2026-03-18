@@ -45,11 +45,13 @@ public class ArticleController {
      * 分页获取文章列表接口
      * @param pageNum 页码（可选，默认 1）
      * @param pageSize 每页数量（可选，默认 10）
+     * @param categoryIds 大标签 ID 列表（可选，逗号分隔的字符串，如 "1,2,3"）
      * @return 文章列表 JSON
      */
     @GetMapping("/list")
     public Object getArticleList(ArticleListRequest request) {
-        log.info("收到获取文章列表请求，页码：{}，每页数量：{}", request.getPageNum(), request.getPageSize());
+        log.info("收到获取文章列表请求，页码：{}，每页数量：{}，分类 IDs: {}", 
+                 request.getPageNum(), request.getPageSize(), request.getCategoryIds());
         return articleService.getArticleList(request);
     }
 

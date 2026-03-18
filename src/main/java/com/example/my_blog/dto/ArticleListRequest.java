@@ -8,7 +8,18 @@ import lombok.Data;
 @Data
 public class ArticleListRequest {
     
+    /**
+     * 页码（可选，默认 1）
+     */
     private Integer pageNum = 1;
     
+    /**
+     * 每页数量（可选，默认 10）
+     */
     private Integer pageSize = 10;
+    
+    /**
+     * 大标签 ID 列表（可选，逗号分隔的字符串，如 "1,2,3"）
+     */
+    private String categoryIds;
 }
