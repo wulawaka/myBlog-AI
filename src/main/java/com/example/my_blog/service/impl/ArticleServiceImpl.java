@@ -5,6 +5,7 @@ import com.example.my_blog.dto.CreateArticleRequest;
 import com.example.my_blog.dto.ArticleResponse;
 import com.example.my_blog.dto.ArticleListRequest;
 import com.example.my_blog.dto.ArticleListItem;
+import com.example.my_blog.dto.UpdateArticleTopRequest;
 import com.example.my_blog.entity.Article;
 import com.example.my_blog.entity.User;
 import com.example.my_blog.entity.Category;
@@ -207,6 +208,50 @@ public class ArticleServiceImpl implements ArticleService {
         } catch (Exception e) {
             log.error("删除文章异常", e);
             return ApiResponse.error("删除文章失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public Object updateArticleTop(UpdateArticleTopRequest request, Long currentUserId) {
+        try {
+            // 验证参数
+            if (request.getArticleId() == null) {
+                return ApiResponse.error("文章 ID 不能为空");
+            }
+            
+            if (request.getIsTop() == null || (request.getIsTop() != 0 && request.getIsTop() != 1)) {
+                return ApiResponse.error("置顶状态必须为 0 或 1");
+            }
+            
+            // 查询文章
+            Optional<Article> articleOptional = articleRepository.findById(request.getArticleId());
+            
+            if (articleOptional.isEmpty()) {
+                return ApiResponse.error("文章不存在");
+            }
+
+            Article article = articleOptional.get();
+            
+            // 检查文章是否已被删除
+            if (article.getIsDeleted().equals(1)) {
+                return ApiResponse.error("文章已被删除，无法设置置顶状态");
+            }
+            
+            // 校验权限：只能修改自己的文章
+            if (!article.getUserId().equals(currentUserId)) {
+                return ApiResponse.error("无权修改该文章");
+            }
+
+            // 更新置顶状态（直接同步到数据库）
+            article.setIsTop(request.getIsTop());
+            articleRepository.save(article);
+
+            log.info("文章 {} 置顶状态更新为：{}，操作用户：{}", article.getTitle(), request.getIsTop(), currentUserId);
+            return ApiResponse.success(null);
+
+        } catch (Exception e) {
+            log.error("更新文章置顶状态异常", e);
+            return ApiResponse.error("更新文章置顶状态失败：" + e.getMessage());
         }
     }
 

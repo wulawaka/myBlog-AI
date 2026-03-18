@@ -2,6 +2,7 @@ package com.example.my_blog.controller;
 
 import com.example.my_blog.dto.CreateArticleRequest;
 import com.example.my_blog.dto.ArticleListRequest;
+import com.example.my_blog.dto.UpdateArticleTopRequest;
 import com.example.my_blog.service.ArticleService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -64,5 +65,21 @@ public class ArticleController {
         Long currentUserId = (Long) request.getAttribute("userId");
         log.info("收到删除文章请求，文章 ID：{}，当前用户 ID：{}", id, currentUserId);
         return articleService.deleteArticle(id, currentUserId);
+    }
+
+    /**
+     * 设置文章置顶状态接口
+     * @param request 更新置顶状态请求体（包含 articleId 和 isTop）
+     * @param httpServletRequest HTTP 请求（用于获取当前登录用户 ID）
+     * @return 更新结果 JSON
+     */
+    @PutMapping("/top")
+    public Object updateArticleTop(@RequestBody UpdateArticleTopRequest request, 
+                                   HttpServletRequest httpServletRequest) {
+        // 从 request 上下文中获取当前登录用户 ID（由拦截器设置）
+        Long currentUserId = (Long) httpServletRequest.getAttribute("userId");
+        log.info("收到更新文章置顶状态请求，文章 ID：{}，置顶状态：{}，当前用户 ID：{}", 
+                 request.getArticleId(), request.getIsTop(), currentUserId);
+        return articleService.updateArticleTop(request, currentUserId);
     }
 }
