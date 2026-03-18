@@ -11,6 +11,7 @@ import com.example.my_blog.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -160,32 +161,41 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public Object getAllTagsTree() {
         try {
-            // 获取所有未删除的标签
+            log.info("开始获取所有未删除的标签树形结构");
+            
+            // 一次性查询所有未删除的标签（包括主标签和子标签）
             List<Category> allCategories = categoryRepository.findByIsDeletedOrderByCreatedAtDesc(0);
+            log.info("共查询到 {} 个未删除的标签", allCategories.size());
             
-            // 分离主标签和子标签
-            List<Category> mainTags = allCategories.stream()
-                    .filter(category -> category.getParentId() == 0)
-                    .collect(Collectors.toList());
+            // 按 parentId 分组：Map<parentId, List<Category>>
+            Map<Long, List<Category>> groupedByParent = allCategories.stream()
+                .collect(Collectors.groupingBy(Category::getParentId));
             
-            List<Category> subTags = allCategories.stream()
-                    .filter(category -> category.getParentId() != 0)
-                    .collect(Collectors.toList());
+            // 获取所有主标签（parentId = 0）
+            List<Category> mainTags = groupedByParent.getOrDefault(0L, new ArrayList<>());
+            log.info("共查询到 {} 个主标签", mainTags.size());
             
             // 构建树形结构
             List<TagTreeNode> treeNodes = mainTags.stream()
-                    .map(mainTag -> {
-                        TagTreeNode mainNode = convertToTreeNode(mainTag);
-                        // 为每个主标签添加子标签
-                        List<TagTreeNode> children = subTags.stream()
-                                .filter(subTag -> subTag.getParentId().equals(mainTag.getId()))
-                                .map(this::convertToTreeNode)
-                                .collect(Collectors.toList());
-                        mainNode.setChildren(children);
-                        return mainNode;
-                    })
-                    .collect(Collectors.toList());
+                .map(mainTag -> {
+                    TagTreeNode mainNode = convertToTreeNode(mainTag);
+                    
+                    // 从 Map 中获取该主标签下的子标签
+                    List<Category> children = groupedByParent.getOrDefault(mainTag.getId(), new ArrayList<>());
+                    log.info("主标签 '{}' (ID={}) 下有 {} 个子标签", 
+                             mainTag.getName(), mainTag.getId(), children.size());
+                    
+                    // 转换子标签为 TreeNode 并设置到主标签下
+                    List<TagTreeNode> childNodes = children.stream()
+                        .map(this::convertToTreeNode)
+                        .collect(Collectors.toList());
+                    
+                    mainNode.setChildren(childNodes);
+                    return mainNode;
+                })
+                .collect(Collectors.toList());
             
+            log.info("标签树构建完成，共 {} 个主节点", treeNodes.size());
             return ApiResponse.success(treeNodes);
             
         } catch (Exception e) {
@@ -195,12 +205,13 @@ public class CategoryServiceImpl implements CategoryService {
     }
     
     /**
-     * 将Category转换为TagTreeNode
+     * 将 Category 转换为 TagTreeNode
      */
     private TagTreeNode convertToTreeNode(Category category) {
         TagTreeNode node = new TagTreeNode();
         node.setId(category.getId());
         node.setName(category.getName());
+        // children 字段会在 setChildren 中设置，默认为空列表
         return node;
     }
 }
