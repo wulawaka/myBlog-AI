@@ -19,21 +19,28 @@ public class ApiResponse<T> {
      * 成功响应
      */
     public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(200, "操作成功", data);
+        return new ApiResponse<>(20101, "操作成功", data);
     }
 
     /**
      * 成功响应（无数据）
      */
     public static <T> ApiResponse<T> success() {
-        return new ApiResponse<>(200, "操作成功", null);
+        return new ApiResponse<>(20101, "操作成功", null);
     }
 
     /**
-     * 失败响应
+     * 失败响应（使用默认错误码 50101）
      */
     public static <T> ApiResponse<T> error(String msg) {
-        return new ApiResponse<>(500, msg, null);
+        return new ApiResponse<>(50101, msg, null);
+    }
+    
+    /**
+     * 失败响应（使用自定义错误码）
+     */
+    public static <T> ApiResponse<T> error(int code, String msg) {
+        return new ApiResponse<>(code, msg, null);
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.example.my_blog.exception;
 
 import com.example.my_blog.common.ApiResponse;
+import com.example.my_blog.constant.UserErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,9 +33,9 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         
-        log.warn("参数验证失败: {}", errorMessage);
+        log.warn("参数验证失败：{}", errorMessage);
         return ResponseEntity.badRequest()
-                .body(ApiResponse.custom(400, errorMessage, null));
+                .body(ApiResponse.custom(UserErrorCode.INVALID_PARAM, errorMessage, null));
     }
 
     /**
@@ -48,9 +49,9 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         
-        log.warn("绑定验证失败: {}", errorMessage);
+        log.warn("绑定验证失败：{}", errorMessage);
         return ResponseEntity.badRequest()
-                .body(ApiResponse.custom(400, errorMessage, null));
+                .body(ApiResponse.custom(UserErrorCode.INVALID_PARAM, errorMessage, null));
     }
 
     /**
@@ -63,9 +64,9 @@ public class GlobalExceptionHandler {
                 .map(ConstraintViolation::getMessage)
                 .collect(Collectors.joining(", "));
         
-        log.warn("约束验证失败: {}", errorMessage);
+        log.warn("约束验证失败：{}", errorMessage);
         return ResponseEntity.badRequest()
-                .body(ApiResponse.custom(400, errorMessage, null));
+                .body(ApiResponse.custom(UserErrorCode.INVALID_PARAM, errorMessage, null));
     }
 
     /**
@@ -75,6 +76,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleException(Exception e) {
         log.error("系统异常", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.custom(500, "系统内部错误: " + e.getMessage(), null));
+                .body(ApiResponse.custom(UserErrorCode.SERVER_ERROR, "系统内部错误：" + e.getMessage(), null));
     }
 }

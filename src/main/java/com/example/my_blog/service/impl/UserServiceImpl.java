@@ -1,6 +1,7 @@
 package com.example.my_blog.service.impl;
 
 import com.example.my_blog.common.ApiResponse;
+import com.example.my_blog.constant.UserErrorCode;
 import com.example.my_blog.dto.LoginRequest;
 import com.example.my_blog.dto.RegisterRequest;
 import com.example.my_blog.dto.ChangePasswordRequest;
@@ -33,42 +34,42 @@ public class UserServiceImpl implements UserService {
         try {
             // 查找用户
             Optional<User> userOptional = userRepository.findByUsername(loginRequest.getUsername());
-            
+                
             if (userOptional.isEmpty()) {
-                return ApiResponse.error("用户不存在");
+                return ApiResponse.error(UserErrorCode.USER_NOT_FOUND, "用户不存在");
             }
-
+    
             User user = userOptional.get();
-            
-            // 使用BCrypt校验密码
+                
+            // 使用BCrypt 校验密码
             try {
                 if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-                    return ApiResponse.error("密码错误");
+                    return ApiResponse.error(UserErrorCode.CREDENTIAL_ERROR, "用户名或密码错误");
                 }
             } catch (Exception e) {
                 log.error("密码校验失败", e);
-                return ApiResponse.error("密码校验失败");
+                return ApiResponse.error(UserErrorCode.ENCRYPTION_ERROR, "密码校验失败");
             }
-
+    
             // 登录成功，返回用户信息（敏感信息不返回）
             Map<String, Object> userInfo = new HashMap<>();
             userInfo.put("id", user.getId());
             userInfo.put("username", user.getUsername());
             userInfo.put("nickname", user.getNickname());
             userInfo.put("email", user.getEmail());
-            
+                
             // 生成 JWT Token
             String token = jwtUtil.generateToken(user.getId(), user.getUsername());
-
+    
             log.info("用户 {} 登录成功", user.getUsername());
-            return ApiResponse.custom(200, "登录成功", Map.of(
+            return ApiResponse.custom(UserErrorCode.SUCCESS, "登录成功", Map.of(
                 "userInfo", userInfo,
                 "token", token
             ));
-
+    
         } catch (Exception e) {
             log.error("登录异常", e);
-            return ApiResponse.error("登录失败：" + e.getMessage());
+            return ApiResponse.error(UserErrorCode.SERVER_ERROR, "登录失败：" + e.getMessage());
         }
     }
 
@@ -77,34 +78,35 @@ public class UserServiceImpl implements UserService {
         try {
             // 检查用户名是否已存在
             if (userRepository.existsByUsername(registerRequest.getUsername())) {
-                return ApiResponse.error("用户名已存在");
+                return ApiResponse.error(UserErrorCode.USERNAME_ALREADY_EXISTS, "用户名已存在");
             }
-            
+                
             // 检查邮箱是否已存在
             if (userRepository.existsByEmail(registerRequest.getEmail())) {
-                return ApiResponse.error("邮箱已被注册");
+                return ApiResponse.error(UserErrorCode.EMAIL_ALREADY_EXISTS, "邮箱已被注册");
             }
-
+    
             // 创建新用户
             User newUser = new User();
             newUser.setUsername(registerRequest.getUsername());
-            
-            // 使用BCrypt加密密码
+                
+            // 使用BCrypt 加密密码
+            String encodedPassword;
             try {
-                String encodedPassword = passwordEncoder.encode(registerRequest.getPassword());
+                encodedPassword = passwordEncoder.encode(registerRequest.getPassword());
                 newUser.setPassword(encodedPassword);
             } catch (Exception e) {
                 log.error("密码加密失败", e);
-                return ApiResponse.error("密码加密失败");
+                return ApiResponse.error(UserErrorCode.ENCRYPTION_ERROR, "密码加密失败");
             }
-            
-            newUser.setNickname(registerRequest.getUsername()); // nickname和username保持一致
+                
+            newUser.setNickname(registerRequest.getUsername()); // nickname 和 username 保持一致
             newUser.setEmail(registerRequest.getEmail());
-            // createdAt会在@PrePersist中自动设置
-
+            // createdAt 会在@PrePersist 中自动设置
+    
             // 保存用户
             User savedUser = userRepository.save(newUser);
-            
+                
             // 返回注册成功的用户信息（不包含密码）
             Map<String, Object> userInfo = new HashMap<>();
             userInfo.put("id", savedUser.getId());
@@ -112,13 +114,13 @@ public class UserServiceImpl implements UserService {
             userInfo.put("nickname", savedUser.getNickname());
             userInfo.put("email", savedUser.getEmail());
             userInfo.put("createdAt", savedUser.getCreatedAt());
-
+    
             log.info("用户 {} 注册成功", savedUser.getUsername());
             return ApiResponse.success(userInfo);
-
+    
         } catch (Exception e) {
             log.error("注册异常", e);
-            return ApiResponse.error("注册失败：" + e.getMessage());
+            return ApiResponse.error(UserErrorCode.SERVER_ERROR, "注册失败：" + e.getMessage());
         }
     }
 
@@ -129,24 +131,24 @@ public class UserServiceImpl implements UserService {
             Optional<User> userOptional = userRepository.findByUsername(changePasswordRequest.getUsername());
             
             if (userOptional.isEmpty()) {
-                return ApiResponse.error("用户不存在");
+                return ApiResponse.error(UserErrorCode.USER_NOT_FOUND, "用户不存在");
             }
 
             User user = userOptional.get();
             
             // 验证邮箱是否匹配
             if (!user.getEmail().equals(changePasswordRequest.getEmail())) {
-                return ApiResponse.error("邮箱地址不正确");
+                return ApiResponse.error(UserErrorCode.INVALID_PARAM, "邮箱地址不正确");
             }
 
             // 验证旧密码是否正确
             try {
                 if (!passwordEncoder.matches(changePasswordRequest.getOldPassword(), user.getPassword())) {
-                    return ApiResponse.error("旧密码错误");
+                    return ApiResponse.error(UserErrorCode.OLD_PASSWORD_ERROR, "旧密码错误");
                 }
             } catch (Exception e) {
                 log.error("旧密码校验失败", e);
-                return ApiResponse.error("密码校验失败");
+                return ApiResponse.error(UserErrorCode.ENCRYPTION_ERROR, "密码校验失败");
             }
 
             // 加密新密码
@@ -155,7 +157,7 @@ public class UserServiceImpl implements UserService {
                 encodedNewPassword = passwordEncoder.encode(changePasswordRequest.getNewPassword());
             } catch (Exception e) {
                 log.error("新密码加密失败", e);
-                return ApiResponse.error("密码加密失败");
+                return ApiResponse.error(UserErrorCode.ENCRYPTION_ERROR, "密码加密失败");
             }
 
             // 更新密码
@@ -167,7 +169,7 @@ public class UserServiceImpl implements UserService {
 
         } catch (Exception e) {
             log.error("密码修改异常", e);
-            return ApiResponse.error("密码修改失败：" + e.getMessage());
+            return ApiResponse.error(UserErrorCode.SERVER_ERROR, "密码修改失败：" + e.getMessage());
         }
     }
 
