@@ -3,13 +3,15 @@ package com.example.my_blog.common;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * 统一API响应格式
+ * 统一 API 响应格式
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.ALWAYS) // 始终包含所有字段，即使值为 null
 public class ApiResponse<T> {
     private Integer code;
     private String msg;

@@ -1,6 +1,7 @@
 package com.example.my_blog.service.impl;
 
 import com.example.my_blog.common.ApiResponse;
+import com.example.my_blog.constant.ArticleErrorCode;
 import com.example.my_blog.dto.CreateArticleRequest;
 import com.example.my_blog.dto.ArticleResponse;
 import com.example.my_blog.dto.ArticleListRequest;
@@ -46,18 +47,18 @@ public class ArticleServiceImpl implements ArticleService {
             // 验证用户是否存在
             Optional<User> userOptional = userRepository.findById(request.getUserId());
             if (userOptional.isEmpty()) {
-                return ApiResponse.error("用户不存在");
+                return ApiResponse.error(ArticleErrorCode.INVALID_PARAM, "用户不存在");
             }
 
             // 验证分类 ID 是否存在且为主标签（parent_id = 0）
             Optional<Category> categoryOptional = categoryRepository.findById(request.getCategoryId());
             if (categoryOptional.isEmpty()) {
-                return ApiResponse.error("分类不存在");
+                return ApiResponse.error(ArticleErrorCode.CATEGORY_NOT_FOUND, "分类不存在");
             }
             
             Category category = categoryOptional.get();
             if (!category.getParentId().equals(0L)) {
-                return ApiResponse.error("分类必须是主标签");
+                return ApiResponse.error(ArticleErrorCode.CATEGORY_MUST_BE_MAIN, "分类必须是主标签");
             }
 
             // 创建文章
@@ -78,7 +79,7 @@ public class ArticleServiceImpl implements ArticleService {
                 String[] subCategoryIds = request.getScategoryId().split(",");
                 
                 if (subCategoryIds.length > 5) {
-                    return ApiResponse.error("子标签数量不能超过 5 个");
+                    return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_COUNT_EXCEEDED, "子标签数量不能超过 5 个");
                 }
                 
                 for (String subCategoryIdStr : subCategoryIds) {
@@ -88,12 +89,12 @@ public class ArticleServiceImpl implements ArticleService {
                         // 验证子标签是否存在且为有效子标签（parent_id != 0）
                         Optional<Category> subCategoryOptional = categoryRepository.findById(subCategoryId);
                         if (subCategoryOptional.isEmpty()) {
-                            return ApiResponse.error("子标签不存在，ID: " + subCategoryId);
+                            return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_NOT_FOUND, "子标签不存在，ID: " + subCategoryId);
                         }
                         
                         Category subCategory = subCategoryOptional.get();
                         if (subCategory.getParentId().equals(0L)) {
-                            return ApiResponse.error("子标签不能是主标签，ID: " + subCategoryId);
+                            return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_CANNOT_BE_MAIN, "子标签不能是主标签，ID: " + subCategoryId);
                         }
                         
                         // 创建关联关系
@@ -191,12 +192,12 @@ public class ArticleServiceImpl implements ArticleService {
             if (mainCategoryId != null) {
                 Optional<Category> mainCategoryOpt = categoryRepository.findById(mainCategoryId);
                 if (mainCategoryOpt.isEmpty()) {
-                    return ApiResponse.error("主标签不存在，ID: " + mainCategoryId);
+                    return ApiResponse.error(ArticleErrorCode.CATEGORY_NOT_FOUND, "主标签不存在，ID: " + mainCategoryId);
                 }
                 
                 Category mainCategory = mainCategoryOpt.get();
                 if (!mainCategory.getParentId().equals(0L)) {
-                    return ApiResponse.error("主标签必须是主分类，ID: " + mainCategoryId);
+                    return ApiResponse.error(ArticleErrorCode.CATEGORY_MUST_BE_MAIN, "主标签必须是主分类，ID: " + mainCategoryId);
                 }
                 
                 // 如果传入了子标签，验证子标签
@@ -213,17 +214,18 @@ public class ArticleServiceImpl implements ArticleService {
                     for (Long subCategoryId : subCategoryIdList) {
                         Optional<Category> subCategoryOpt = categoryRepository.findById(subCategoryId);
                         if (subCategoryOpt.isEmpty()) {
-                            return ApiResponse.error("子标签不存在，ID: " + subCategoryId);
+                            return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_NOT_FOUND, "子标签不存在，ID: " + subCategoryId);
                         }
                         
                         Category subCategory = subCategoryOpt.get();
                         if (subCategory.getParentId().equals(0L)) {
-                            return ApiResponse.error("子标签不能是主分类，ID: " + subCategoryId);
+                            return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_CANNOT_BE_MAIN, "子标签不能是主分类，ID: " + subCategoryId);
                         }
                         
                         // 关键校验：检查子标签是否属于当前主标签
                         if (!subCategory.getParentId().equals(mainCategoryId)) {
                             return ApiResponse.error(
+                                ArticleErrorCode.INVALID_PARAM,
                                 String.format("子标签 ID %d 不属于主标签 ID %d，其所属主标签 ID 为 %d", 
                                     subCategoryId, mainCategoryId, subCategory.getParentId()));
                         }
@@ -370,19 +372,19 @@ public class ArticleServiceImpl implements ArticleService {
             Optional<Article> articleOptional = articleRepository.findById(articleId);
             
             if (articleOptional.isEmpty()) {
-                return ApiResponse.error("文章不存在");
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_NOT_FOUND, "文章不存在");
             }
 
             Article article = articleOptional.get();
             
             // 检查文章是否已被删除
             if (article.getIsDeleted().equals(1)) {
-                return ApiResponse.error("文章已被删除");
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_DELETED, "文章已被删除");
             }
             
             // 校验权限：只能删除自己的文章
             if (!article.getUserId().equals(currentUserId)) {
-                return ApiResponse.error("无权删除该文章");
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_UNAUTHORIZED, "无权删除该文章");
             }
 
             // 执行软删除
@@ -394,7 +396,7 @@ public class ArticleServiceImpl implements ArticleService {
 
         } catch (Exception e) {
             log.error("删除文章异常", e);
-            return ApiResponse.error("删除文章失败：" + e.getMessage());
+            return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "删除文章失败：" + e.getMessage());
         }
     }
 
@@ -403,30 +405,30 @@ public class ArticleServiceImpl implements ArticleService {
         try {
             // 验证参数
             if (request.getArticleId() == null) {
-                return ApiResponse.error("文章 ID 不能为空");
+                return ApiResponse.error(ArticleErrorCode.INVALID_PARAM, "文章 ID 不能为空");
             }
             
             if (request.getIsTop() == null || (request.getIsTop() != 0 && request.getIsTop() != 1)) {
-                return ApiResponse.error("置顶状态必须为 0 或 1");
+                return ApiResponse.error(ArticleErrorCode.INVALID_TOP_STATUS, "置顶状态必须为 0 或 1");
             }
             
             // 查询文章
             Optional<Article> articleOptional = articleRepository.findById(request.getArticleId());
             
             if (articleOptional.isEmpty()) {
-                return ApiResponse.error("文章不存在");
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_NOT_FOUND, "文章不存在");
             }
 
             Article article = articleOptional.get();
             
             // 检查文章是否已被删除
             if (article.getIsDeleted().equals(1)) {
-                return ApiResponse.error("文章已被删除，无法设置置顶状态");
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_DELETED, "文章已被删除，无法设置置顶状态");
             }
             
             // 校验权限：只能修改自己的文章
             if (!article.getUserId().equals(currentUserId)) {
-                return ApiResponse.error("无权修改该文章");
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_UNAUTHORIZED, "无权修改该文章");
             }
 
             // 更新置顶状态（直接同步到数据库）
@@ -438,7 +440,7 @@ public class ArticleServiceImpl implements ArticleService {
 
         } catch (Exception e) {
             log.error("更新文章置顶状态异常", e);
-            return ApiResponse.error("更新文章置顶状态失败：" + e.getMessage());
+            return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "更新文章置顶状态失败：" + e.getMessage());
         }
     }
 

@@ -165,7 +165,7 @@ public class UserServiceImpl implements UserService {
             userRepository.save(user);
 
             log.info("用户 {} 密码修改成功", user.getUsername());
-            return ApiResponse.success("密码修改成功");
+            return ApiResponse.custom(UserErrorCode.SUCCESS, "密码修改成功", null);
 
         } catch (Exception e) {
             log.error("密码修改异常", e);
