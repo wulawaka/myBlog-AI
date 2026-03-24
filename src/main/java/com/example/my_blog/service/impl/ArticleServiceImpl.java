@@ -6,6 +6,7 @@ import com.example.my_blog.dto.CreateArticleRequest;
 import com.example.my_blog.dto.ArticleResponse;
 import com.example.my_blog.dto.ArticleListRequest;
 import com.example.my_blog.dto.ArticleListItem;
+import com.example.my_blog.dto.SubCategoryInfo;
 import com.example.my_blog.dto.UpdateArticleTopRequest;
 import com.example.my_blog.entity.Article;
 import com.example.my_blog.entity.User;
@@ -363,12 +364,21 @@ public class ArticleServiceImpl implements ArticleService {
         Optional<User> userOptional = userRepository.findById(article.getUserId());
         userOptional.ifPresent(user -> item.setUsername(user.getUsername()));
             
-        // 获取子标签 ID 列表
+        // 获取子标签列表（包含 id 和 name）
         List<ArticleCategoryRelation> relations = articleCategoryRelationRepository.findByArticleId(article.getId());
-        String subCategoryIds = relations.stream()
-                .map(relation -> relation.getCategoryId().toString())
-                .collect(Collectors.joining(","));
-        item.setSubCategoryIds(subCategoryIds);
+        List<SubCategoryInfo> subCategories = relations.stream()
+                .map(relation -> {
+                    SubCategoryInfo info = new SubCategoryInfo();
+                    info.setId(relation.getCategoryId());
+                        
+                    // 查询子标签名称
+                    Optional<Category> subCategoryOptional = categoryRepository.findById(relation.getCategoryId());
+                    subCategoryOptional.ifPresent(subCategory -> info.setName(subCategory.getName()));
+                        
+                    return info;
+                })
+                .collect(Collectors.toList());
+        item.setSubCategories(subCategories);
             
         return item;
     }
