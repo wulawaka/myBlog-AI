@@ -16,4 +16,14 @@ public class ArticleListItem {
     private Integer isTop;
     private LocalDateTime updatedAt;
     private String subCategoryIds;
+    
+    /**
+     * 分类名称
+     */
+    private String categoryName;
+    
+    /**
+     * 作者用户名
+     */
+    private String username;
 }

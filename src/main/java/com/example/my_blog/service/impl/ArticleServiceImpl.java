@@ -354,14 +354,22 @@ public class ArticleServiceImpl implements ArticleService {
         item.setSummary(article.getSummary());
         item.setIsTop(article.getIsTop());
         item.setUpdatedAt(article.getUpdatedAt());
-        
-        // 获取子标签ID 列表
+            
+        // 获取分类名称
+        Optional<Category> categoryOptional = categoryRepository.findById(article.getCategoryId());
+        categoryOptional.ifPresent(category -> item.setCategoryName(category.getName()));
+            
+        // 获取作者用户名
+        Optional<User> userOptional = userRepository.findById(article.getUserId());
+        userOptional.ifPresent(user -> item.setUsername(user.getUsername()));
+            
+        // 获取子标签 ID 列表
         List<ArticleCategoryRelation> relations = articleCategoryRelationRepository.findByArticleId(article.getId());
         String subCategoryIds = relations.stream()
                 .map(relation -> relation.getCategoryId().toString())
                 .collect(Collectors.joining(","));
         item.setSubCategoryIds(subCategoryIds);
-        
+            
         return item;
     }
 
