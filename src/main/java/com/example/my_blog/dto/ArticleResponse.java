@@ -2,9 +2,10 @@ package com.example.my_blog.dto;
 
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
- * 文章响应DTO
+ * 文章响应 DTO
  */
 @Data
 public class ArticleResponse {
@@ -20,12 +21,18 @@ public class ArticleResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
-    private UserInfo userInfo;
-    private String scategoryId;
-
-    @Data
-    public static class UserInfo {
-        private String username;
-        private String email;
-    }
+    /**
+     * 作者用户名
+     */
+    private String username;
+    
+    /**
+     * 分类名称
+     */
+    private String categoryName;
+    
+    /**
+     * 子标签列表
+     */
+    private List<SubCategoryInfo> subCategories;
 }

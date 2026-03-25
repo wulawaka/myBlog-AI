@@ -28,4 +28,9 @@ public interface ArticleService {
      * 设置文章置顶状态
      */
     Object updateArticleTop(UpdateArticleTopRequest request, Long currentUserId);
+    
+    /**
+     * 获取文章详情（无需登录）
+     */
+    Object getArticleDetail(Long id);
 }

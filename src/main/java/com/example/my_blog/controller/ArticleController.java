@@ -87,4 +87,15 @@ public class ArticleController {
                  request.getArticleId(), request.getIsTop(), currentUserId);
         return articleService.updateArticleTop(request, currentUserId);
     }
+    
+    /**
+     * 获取文章详情接口（无需登录）
+     * @param id 文章 ID（路径参数）
+     * @return 文章详情 JSON
+     */
+    @GetMapping("/{id}")
+    public Object getArticleDetail(@PathVariable Long id) {
+        log.info("收到获取文章详情请求，文章 ID：{}", id);
+        return articleService.getArticleDetail(id);
+    }
 }

@@ -112,14 +112,13 @@ public class ArticleServiceImpl implements ArticleService {
 
             // 构建返回结果
             ArticleResponse response = buildArticleResponse(savedArticle, userOptional.get());
-            response.setScategoryId(request.getScategoryId());
             
             log.info("文章 {} 创建成功", savedArticle.getTitle());
             return ApiResponse.success(response);
 
         } catch (Exception e) {
             log.error("创建文章异常", e);
-            return ApiResponse.error("创建文章失败：" + e.getMessage());
+            return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "创建文章失败：" + e.getMessage());
         }
     }
 
@@ -481,12 +480,73 @@ public class ArticleServiceImpl implements ArticleService {
         response.setCreatedAt(article.getCreatedAt());
         response.setUpdatedAt(article.getUpdatedAt());
         
-        // 用户信息
-        ArticleResponse.UserInfo userInfo = new ArticleResponse.UserInfo();
-        userInfo.setUsername(user.getUsername());
-        userInfo.setEmail(user.getEmail());
-        response.setUserInfo(userInfo);
+        // 设置用户名
+        response.setUsername(user.getUsername());
         
         return response;
+    }
+    
+    @Override
+    public Object getArticleDetail(Long id) {
+        try {
+            // 查询文章
+            Optional<Article> articleOptional = articleRepository.findById(id);
+            
+            if (articleOptional.isEmpty()) {
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_NOT_FOUND, "文章不存在");
+            }
+
+            Article article = articleOptional.get();
+            
+            // 检查文章是否已被删除
+            if (article.getIsDeleted().equals(1)) {
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_DELETED, "文章已被删除");
+            }
+
+            // 构建响应
+            ArticleResponse response = new ArticleResponse();
+            response.setId(article.getId());
+            response.setUserId(article.getUserId());
+            response.setCategoryId(article.getCategoryId());
+            response.setTitle(article.getTitle());
+            response.setSummary(article.getSummary());
+            response.setContent(article.getContent());
+            response.setIsTop(article.getIsTop());
+            response.setIsDraft(article.getIsDraft());
+            response.setIsDeleted(article.getIsDeleted());
+            response.setCreatedAt(article.getCreatedAt());
+            response.setUpdatedAt(article.getUpdatedAt());
+            
+            // 获取作者用户名
+            Optional<User> userOptional = userRepository.findById(article.getUserId());
+            userOptional.ifPresent(user -> response.setUsername(user.getUsername()));
+            
+            // 获取分类名称
+            Optional<Category> categoryOptional = categoryRepository.findById(article.getCategoryId());
+            categoryOptional.ifPresent(category -> response.setCategoryName(category.getName()));
+            
+            // 获取子标签列表
+            List<ArticleCategoryRelation> relations = articleCategoryRelationRepository.findByArticleId(article.getId());
+            List<SubCategoryInfo> subCategories = relations.stream()
+                    .map(relation -> {
+                        SubCategoryInfo info = new SubCategoryInfo();
+                        info.setId(relation.getCategoryId());
+                        
+                        // 查询子标签名称
+                        Optional<Category> subCategoryOptional = categoryRepository.findById(relation.getCategoryId());
+                        subCategoryOptional.ifPresent(subCategory -> info.setName(subCategory.getName()));
+                        
+                        return info;
+                    })
+                    .collect(Collectors.toList());
+            response.setSubCategories(subCategories);
+            
+            log.info("获取文章详情成功，文章 ID: {}，标题：{}", id, article.getTitle());
+            return ApiResponse.success(response);
+            
+        } catch (Exception e) {
+            log.error("获取文章详情异常", e);
+            return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "获取文章详情失败：" + e.getMessage());
+        }
     }
 }
