@@ -241,8 +241,11 @@ public class ArticleServiceImpl implements ArticleService {
                 request.getPageSize()
             );
             
-            // 根据是否有分类筛选执行不同的查询
+            // 根据是否有分类筛选和用户筛选执行不同的查询
             Page<Article> articlePage;
+            
+            // 检查是否传入了 userId
+            boolean hasUserFilter = request.getUserId() != null;
             
             // 优先处理主标签 + 子标签联动筛选
             // 注意：必须同时满足主标签不为 null，且子标签列表真正有值
@@ -250,14 +253,22 @@ public class ArticleServiceImpl implements ArticleService {
                 && !request.getScategoryIds().trim().isEmpty() 
                 && subCategoryIdList != null && !subCategoryIdList.isEmpty()) {
                 
-                log.info("进入主标签 + 子标签联动筛选模式，主标签 ID: {}, 子标签 ID 列表：{}", 
-                         mainCategoryId, subCategoryIdList);
+                log.info("进入主标签 + 子标签联动筛选模式，主标签 ID: {}, 子标签 ID 列表：{}, 用户 ID: {}", 
+                         mainCategoryId, subCategoryIdList, request.getUserId());
                 
                 // 模式：主标签 + 子标签联动
                 // 第一步：查询符合主标签的所有文章 ID
-                List<Article> articlesByMainCategory = articleRepository.findByCategoryIdAndIsDeletedAndIsDraft(
-                    mainCategoryId, 0, 0
-                );
+                List<Article> articlesByMainCategory;
+                if (hasUserFilter) {
+                    // 如果传入了 userId，只查询该用户的文章
+                    articlesByMainCategory = articleRepository.findByUserIdAndCategoryIdAndIsDeletedAndIsDraft(
+                        request.getUserId(), mainCategoryId, 0, 0
+                    );
+                } else {
+                    articlesByMainCategory = articleRepository.findByCategoryIdAndIsDeletedAndIsDraft(
+                        mainCategoryId, 0, 0
+                    );
+                }
                 
                 log.info("主标签 {} 下的文章总数：{}", mainCategoryId, articlesByMainCategory.size());
                 
@@ -300,25 +311,49 @@ public class ArticleServiceImpl implements ArticleService {
                 }
                 
                 // 第四步：根据匹配的文章 ID 分页查询
-                articlePage = articleRepository.findByIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
-                    matchedArticleIds, 0, 0, pageRequest
-                );
+                if (hasUserFilter) {
+                    articlePage = articleRepository.findByUserIdAndIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+                        request.getUserId(), matchedArticleIds, 0, 0, pageRequest
+                    );
+                } else {
+                    articlePage = articleRepository.findByIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+                        matchedArticleIds, 0, 0, pageRequest
+                    );
+                }
                 
             } else if (mainCategoryId != null) {
                 // 模式：只按主标签筛选
-                articlePage = articleRepository.findByCategoryIdAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
-                    mainCategoryId, 0, 0, pageRequest
-                );
+                if (hasUserFilter) {
+                    articlePage = articleRepository.findByUserIdAndCategoryIdAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+                        request.getUserId(), mainCategoryId, 0, 0, pageRequest
+                    );
+                } else {
+                    articlePage = articleRepository.findByCategoryIdAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+                        mainCategoryId, 0, 0, pageRequest
+                    );
+                }
                 
             } else if (categoryIdList != null && !categoryIdList.isEmpty()) {
-                // 模式：按多个主标签筛选（兼容之前的功能）
-                articlePage = articleRepository.findByCategoryIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
-                    categoryIdList, 0, 0, pageRequest
-                );
+                // 模式：按多个主标签筛选
+                if (hasUserFilter) {
+                    articlePage = articleRepository.findByUserIdAndCategoryIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+                        request.getUserId(), categoryIdList, 0, 0, pageRequest
+                    );
+                } else {
+                    articlePage = articleRepository.findByCategoryIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+                        categoryIdList, 0, 0, pageRequest
+                    );
+                }
                 
             } else {
                 // 模式：无筛选条件
-                articlePage = articleRepository.findByIsDeletedAndIsDraftOrderByUpdatedAtDesc(0, 0, pageRequest);
+                if (hasUserFilter) {
+                    articlePage = articleRepository.findByUserIdAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+                        request.getUserId(), 0, 0, pageRequest
+                    );
+                } else {
+                    articlePage = articleRepository.findByIsDeletedAndIsDraftOrderByUpdatedAtDesc(0, 0, pageRequest);
+                }
             }
             
             // 构建返回结果

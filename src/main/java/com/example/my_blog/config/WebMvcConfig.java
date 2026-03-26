@@ -21,14 +21,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns(
                         "/api/user/change-password",
                         "/api/user/logout",
-                        "/api/article/**",
+                        "/api/article/my-list",
+                        "/api/article/top",
                         "/api/category/main-tag",
                         "/api/category/sub-tag",
                         "/api/category/tag"
                 )
                 .excludePathPatterns(
                         "/api/article/list",
-                        "/api/article/{id}",
                         "/api/user/login",
                         "/api/user/register",
                         "/api/category/tags/tree"

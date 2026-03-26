@@ -50,8 +50,20 @@ public class JwtUtil {
      */
     public Long getUserIdFromToken(String token) {
         try {
+            log.info("开始从 Token 中获取用户 ID");
             Claims claims = getClaimsFromToken(token);
-            return Long.valueOf(claims.get("userId").toString());
+            log.info("Claims 内容：{}", claims);
+            log.info("userId from claims: {}", claims.get("userId"));
+            
+            Object userIdObj = claims.get("userId");
+            if (userIdObj == null) {
+                log.error("Claims 中没有 userId 字段");
+                return null;
+            }
+            
+            Long userId = Long.valueOf(userIdObj.toString());
+            log.info("成功获取用户 ID: {}", userId);
+            return userId;
         } catch (Exception e) {
             log.error("获取用户 ID 失败", e);
             return null;

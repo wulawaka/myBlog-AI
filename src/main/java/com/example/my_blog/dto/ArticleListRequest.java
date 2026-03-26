@@ -32,4 +32,9 @@ public class ArticleListRequest {
      * 子标签 ID 列表（可选，逗号分隔的字符串，如 "2,3,4"）
      */
     private String scategoryIds;
+    
+    /**
+     * 用户 ID（用于筛选特定用户的文章，在 /my-list 接口中使用）
+     */
+    private Long userId;
 }

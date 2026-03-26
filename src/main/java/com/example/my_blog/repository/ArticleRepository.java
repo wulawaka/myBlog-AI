@@ -40,9 +40,44 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     );
     
     /**
+     * 根据用户 ID 和主标签 ID 查询未删除且已发布的文章（不分页）
+     */
+    List<Article> findByUserIdAndCategoryIdAndIsDeletedAndIsDraft(
+        Long userId, Long categoryId, Integer isDeleted, Integer isDraft
+    );
+    
+    /**
      * 根据文章 ID 列表分页查询未删除且已发布的文章
      */
     Page<Article> findByIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
         List<Long> ids, Integer isDeleted, Integer isDraft, Pageable pageable
+    );
+    
+    /**
+     * 根据用户 ID 和文章 ID 列表分页查询未删除且已发布的文章
+     */
+    Page<Article> findByUserIdAndIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+        Long userId, List<Long> ids, Integer isDeleted, Integer isDraft, Pageable pageable
+    );
+    
+    /**
+     * 根据用户 ID 和主标签 ID 分页查询未删除且已发布的文章
+     */
+    Page<Article> findByUserIdAndCategoryIdAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+        Long userId, Long categoryId, Integer isDeleted, Integer isDraft, Pageable pageable
+    );
+    
+    /**
+     * 根据用户 ID 和分类 ID 列表分页查询未删除且已发布的文章
+     */
+    Page<Article> findByUserIdAndCategoryIdInAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+        Long userId, List<Long> categoryId, Integer isDeleted, Integer isDraft, Pageable pageable
+    );
+    
+    /**
+     * 根据用户 ID 分页查询未删除且已发布的文章
+     */
+    Page<Article> findByUserIdAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+        Long userId, Integer isDeleted, Integer isDraft, Pageable pageable
     );
 }

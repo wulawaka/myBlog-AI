@@ -19,9 +19,10 @@
 - [三、文章模块 (ArticleController)](#三文章模块-articlecontroller)
   - [3.1 创建文章](#31-创建文章)
   - [3.2 获取文章列表](#32-获取文章列表)
-  - [3.3 删除文章](#33-删除文章)
-  - [3.4 更新文章置顶状态](#34-更新文章置顶状态)
-  - [3.5 获取文章详情](#35-获取文章详情)
+  - [3.3 获取我的文章列表](#33-获取我的文章列表)
+  - [3.4 删除文章](#34-删除文章)
+  - [3.5 更新文章置顶状态](#35-更新文章置顶状态)
+  - [3.6 获取文章详情](#36-获取文章详情)
 - [四、数据结构说明](#四数据结构说明)
 - [五、错误码说明](#五错误码说明)
 
@@ -648,6 +649,101 @@
 
 ---
 
+## 3.3 获取我的文章列表
+
+### 基本信息
+- **接口名称**: 获取我的文章列表
+- **请求方法**: GET
+- **请求路径**: `/api/article/my-list`
+- **功能描述**: 分页获取当前登录用户的文章列表，支持按主标签和子标签筛选（需要登录）
+
+### 请求参数
+
+#### Query 参数
+
+| 字段名 | 类型 | 必填 | 示例值 | 说明 |
+|--------|------|------|--------|------|
+| pageNum | Integer | 否 | `1` | 页码，默认 1 |
+| pageSize | Integer | 否 | `10` | 每页数量，默认 10 |
+| categoryIds | String | 否 | `"1,2,3"` | 大标签 ID 列表，逗号分隔 |
+| categoryId | Long | 否 | `1` | 主标签 ID，单个，用于与子标签联动 |
+| scategoryIds | String | 否 | `"2,3,4"` | 子标签 ID 列表，逗号分隔 |
+
+#### 请求头
+需要包含 JWT Token 进行身份验证（后端从 Request 上下文中自动获取 userId）
+
+### 响应参数
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| code | Integer | 业务状态码（5 位数） |
+| msg | String | 响应消息 |
+| data | Object | 响应数据 |
+| data.list | Array | 文章列表 |
+| data.list[].id | Long | 文章 ID |
+| data.list[].userId | Long | 用户 ID |
+| data.list[].categoryId | Long | 主分类 ID |
+| data.list[].title | String | 文章标题 |
+| data.list[].summary | String | 文章概述 |
+| data.list[].isTop | Integer | 置顶状态 |
+| data.list[].updatedAt | DateTime | 更新时间 |
+| data.list[].username | String | 作者用户名 |
+| data.list[].categoryName | String | 分类名称 |
+| data.list[].subCategories | Array | 子标签列表 |
+| data.list[].subCategories[].id | Long | 子标签 ID |
+| data.list[].subCategories[].name | String | 子标签名称 |
+| data.total | Long | 总记录数 |
+| data.pageNum | Integer | 当前页码 |
+| data.pageSize | Integer | 每页数量 |
+| data.totalPages | Integer | 总页数 |
+
+### 数据结构说明
+
+**SubCategoryInfo（子标签信息）**:
+- `id`: 子标签 ID
+- `name`: 子标签名称
+
+### 响应示例
+
+#### 成功响应
+```json
+{
+  "code": 20201,
+  "msg": "操作成功",
+  "data": {
+    "list": [
+      {
+        "id": 1,
+        "userId": 1,
+        "categoryId": 1,
+        "title": "Spring Boot 入门教程",
+        "summary": "本文介绍 Spring Boot 的基础知识...",
+        "isTop": 1,
+        "updatedAt": "2026-03-23T10:30:00",
+        "username": "admin",
+        "categoryName": "Java",
+        "subCategories": [
+          {
+            "id": 2,
+            "name": "Spring"
+          },
+          {
+            "id": 3,
+            "name": "MyBatis"
+          }
+        ]
+      }
+    ],
+    "total": 1,
+    "pageNum": 1,
+    "pageSize": 10,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
 ## 3.2 获取文章列表
 
 ### 基本信息
@@ -757,7 +853,7 @@
 
 ---
 
-## 3.3 删除文章
+## 3.4 删除文章
 
 ### 基本信息
 - **接口名称**: 删除文章
@@ -815,7 +911,7 @@
 
 ---
 
-## 3.4 更新文章置顶状态
+## 3.5 更新文章置顶状态
 
 ### 基本信息
 - **接口名称**: 更新文章置顶状态
@@ -874,7 +970,7 @@
 
 ---
 
-## 3.5 获取文章详情
+## 3.6 获取文章详情
 
 ### 基本信息
 - **接口名称**: 获取文章详情
@@ -1155,6 +1251,6 @@ Token 有效期由 JWT 配置决定，过期后需要重新登录。
 
 ---
 
-**文档版本**: v2.0  
+**文档版本**: v3.0  
 **最后更新**: 2026-03-25  
 **技术栈**: Spring Boot 4.0.3 + Spring Security + JPA + MySQL + JWT (JJWT 0.11.5)
