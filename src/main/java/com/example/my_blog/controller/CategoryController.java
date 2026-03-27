@@ -3,6 +3,7 @@ package com.example.my_blog.controller;
 import com.example.my_blog.dto.CreateMainTagRequest;
 import com.example.my_blog.dto.CreateSubTagRequest;
 import com.example.my_blog.dto.DeleteTagRequest;
+import com.example.my_blog.dto.UpdateMainTagRequest;
 import com.example.my_blog.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,12 +48,24 @@ public class CategoryController {
     /**
      * 删除标签接口
      * @param name 标签名称（必填）
-     * @return 删除结果JSON
+     * @return 删除结果 JSON
      */
     @DeleteMapping("/tag")
     public Object deleteTag(@Valid @RequestBody DeleteTagRequest request) {
         log.info("收到删除标签请求，标签名称：{}", request.getName());
         return categoryService.deleteTag(request);
+    }
+    
+    /**
+     * 更新标签名称接口
+     * @param id 标签 ID（必填）
+     * @param name 标签新名称（必填，1-6 位）
+     * @return 更新结果 JSON
+     */
+    @PutMapping("/change-tag-name")
+    public Object updateMainTag(@Valid @RequestBody UpdateMainTagRequest request) {
+        log.info("收到更新主标签请求，标签 ID：{}，新名称：{}", request.getId(), request.getName());
+        return categoryService.updateMainTag(request);
     }
 
     /**

@@ -6,12 +6,15 @@ import com.example.my_blog.dto.CreateMainTagRequest;
 import com.example.my_blog.dto.CreateSubTagRequest;
 import com.example.my_blog.dto.DeleteTagRequest;
 import com.example.my_blog.dto.TagTreeNode;
+import com.example.my_blog.dto.UpdateMainTagRequest;
 import com.example.my_blog.entity.Category;
 import com.example.my_blog.repository.CategoryRepository;
 import com.example.my_blog.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -214,5 +217,59 @@ public class CategoryServiceImpl implements CategoryService {
         node.setName(category.getName());
         // children 字段会在 setChildren 中设置，默认为空列表
         return node;
+    }
+
+    @Override
+    public Object updateMainTag(UpdateMainTagRequest request) {
+        try {
+            log.info("收到更新主标签请求，标签 ID：{}，新名称：{}", request.getId(), request.getName());
+            
+            // 根据 ID 查找标签
+            Optional<Category> categoryOptional = categoryRepository.findById(request.getId());
+            
+            if (categoryOptional.isEmpty()) {
+                log.warn("标签不存在，ID: {}", request.getId());
+                return ApiResponse.error(CategoryErrorCode.CATEGORY_NOT_FOUND, "标签不存在");
+            }
+
+            Category category = categoryOptional.get();
+            Integer isDeleted = category.getIsDeleted();
+
+            // 校验标签是否已被删除 (is_deleted = 0)
+            if (isDeleted != 0) {
+                log.warn("标签已删除，ID: {}", request.getId());
+                return ApiResponse.error(CategoryErrorCode.TAG_IS_DELETED, "标签已被删除，无法修改");
+            }
+
+            // 检查新名称是否与其他标签重复（排除当前标签自己）
+            Optional<Category> existingCategoryOpt = categoryRepository.findByName(request.getName());
+            if (existingCategoryOpt.isPresent()) {
+                Category existingCategory = existingCategoryOpt.get();
+                // 检查是否是同一个标签（允许不改名的情况）
+                if (!existingCategory.getId().equals(request.getId())) {
+                    log.warn("标签名称已存在，名称：{}", request.getName());
+                    return ApiResponse.error(CategoryErrorCode.CATEGORY_NAME_EXISTS, "标签名称已存在");
+                }
+            }
+
+            // 更新标签名称
+            category.setName(request.getName());
+            categoryRepository.save(category);
+
+            log.info("主标签 ID {} 名称更新为 {}", request.getId(), request.getName());
+            
+            // 返回成功信息
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", category.getId());
+            result.put("name", category.getName());
+            result.put("parentId", category.getParentId());
+            result.put("updatedAt", LocalDateTime.now());
+
+            return ApiResponse.success(result);
+
+        } catch (Exception e) {
+            log.error("更新主标签异常", e);
+            return ApiResponse.error(CategoryErrorCode.SERVER_ERROR, "更新主标签失败：" + e.getMessage());
+        }
     }
 }

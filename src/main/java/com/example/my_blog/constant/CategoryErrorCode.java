@@ -47,6 +47,16 @@ public class CategoryErrorCode {
      */
     public static final int INVALID_PARAM = 40306;
     
+    /**
+     * 不能修改子标签
+     */
+    public static final int CANNOT_MODIFY_SUB_TAG = 40307;
+    
+    /**
+     * 标签已删除
+     */
+    public static final int TAG_IS_DELETED = 40308;
+    
     // ==================== 服务端错误 (503XX) ====================
     /**
      * 服务器内部错误

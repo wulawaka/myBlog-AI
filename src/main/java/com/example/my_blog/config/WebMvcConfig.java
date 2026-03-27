@@ -26,7 +26,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/article/draft",
                         "/api/category/main-tag",
                         "/api/category/sub-tag",
-                        "/api/category/tag"
+                        "/api/category/tag",
+                        "/api/category/change-tag-name"  // 更新主标签需要登录
                 )
                 .excludePathPatterns(
                         "/api/article/list",
