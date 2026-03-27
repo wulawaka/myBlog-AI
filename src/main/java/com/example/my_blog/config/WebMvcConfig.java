@@ -23,6 +23,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/user/logout",
                         "/api/article/my-list",
                         "/api/article/top",
+                        "/api/article/draft",
                         "/api/category/main-tag",
                         "/api/category/sub-tag",
                         "/api/category/tag"

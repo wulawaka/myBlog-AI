@@ -4,6 +4,7 @@ import com.example.my_blog.common.ApiResponse;
 import com.example.my_blog.dto.CreateArticleRequest;
 import com.example.my_blog.dto.ArticleListRequest;
 import com.example.my_blog.dto.UpdateArticleTopRequest;
+import com.example.my_blog.dto.UpdateArticleDraftRequest;
 import com.example.my_blog.service.ArticleService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -138,6 +139,37 @@ public class ArticleController {
         System.out.println("===========================================");
         
         return articleService.updateArticleTop(request, currentUserId);
+    }
+    
+    /**
+     * 设置文章草稿状态接口
+     * @param request 更新草稿状态请求体（包含 articleId 和 isDraft）
+     * @param httpServletRequest HTTP 请求（用于获取当前登录用户 ID）
+     * @return 更新结果 JSON
+     */
+    @PutMapping("/draft")
+    public Object updateArticleDraft(@RequestBody UpdateArticleDraftRequest request, 
+                                     HttpServletRequest httpServletRequest) {
+        // 打印调试信息
+        System.out.println("===========================================");
+        System.out.println("=== 设置草稿状态 - Controller 收到请求 ===");
+        System.out.println("===========================================");
+        
+        // 从 request 上下文中获取当前登录用户 ID（由拦截器设置）
+        Long currentUserId = (Long) httpServletRequest.getAttribute("userId");
+        log.info("收到更新文章草稿状态请求，文章 ID：{}，草稿状态：{}，当前用户 ID：{}", 
+                 request.getArticleId(), request.getIsDraft(), currentUserId);
+        
+        if (currentUserId == null) {
+            log.error("用户 ID 为 null，请检查是否携带有效的 Token");
+            System.out.println("!!! 警告：userId 为 null，拦截器未设置用户 ID !!!");
+            return ApiResponse.error("请先登录");
+        }
+        
+        System.out.println("=== userId: " + currentUserId + " ===");
+        System.out.println("===========================================");
+        
+        return articleService.updateArticleDraft(request, currentUserId);
     }
     
     /**
