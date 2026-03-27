@@ -115,7 +115,7 @@ public class ArticleServiceImpl implements ArticleService {
             ArticleResponse response = buildArticleResponse(savedArticle, userOptional.get());
             
             log.info("文章 {} 创建成功", savedArticle.getTitle());
-            return ApiResponse.success(response);
+            return ApiResponse.custom(ArticleErrorCode.SUCCESS, "操作成功", response);
 
         } catch (Exception e) {
             log.error("创建文章异常", e);
