@@ -24,7 +24,8 @@
   - [3.4 删除文章](#34-删除文章)
   - [3.5 更新文章置顶状态](#35-更新文章置顶状态)
   - [3.6 更新文章草稿状态](#36-更新文章草稿状态)
-  - [3.7 获取文章详情](#37-获取文章详情)
+  - [3.7 分页查询文章状态](#37-分页查询文章状态)
+  - [3.8 获取文章详情](#38-获取文章详情)
 - [四、数据结构说明](#四数据结构说明)
 - [五、错误码说明](#五错误码说明)
 
@@ -1114,7 +1115,101 @@
 
 ---
 
-## 3.7 获取文章详情
+## 3.7 分页查询文章状态
+
+### 基本信息
+- **接口名称**: 分页查询文章状态
+- **请求方法**: POST
+- **请求路径**: `/api/article/status`
+- **功能描述**: 分页查询指定文章的状态信息（需要登录权限）
+
+### 请求参数
+
+#### Body 参数（JSON）
+
+| 字段名 | 类型 | 必填 | 示例值 | 说明 |
+|--------|------|------|--------|------|
+| articleId | Long | 是 | `1` | 文章 ID |
+| isDraft | Integer | 是 | `0` | 草稿状态：0-已发布，1-草稿 |
+| isDeleted | Integer | 否 | `0` | 删除状态：0-否，1-是（可选，默认不筛选） |
+| pageNum | Integer | 否 | `1` | 页码，默认 1 |
+| pageSize | Integer | 否 | `10` | 每页数量，默认 10 |
+
+#### 请求头
+需要包含 JWT Token 进行身份验证
+
+### 响应参数
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| code | Integer | 业务状态码（5 位数） |
+| msg | String | 响应消息 |
+| data | Object | 响应数据 |
+| data.list | Array | 文章状态列表 |
+| data.list[].id | Long | 文章 ID |
+| data.list[].userId | Long | 用户 ID |
+| data.list[].categoryId | Long | 主分类 ID |
+| data.list[].title | String | 文章标题 |
+| data.list[].summary | String | 文章概述 |
+| data.list[].isTop | Integer | 置顶状态 |
+| data.list[].isDraft | Integer | 草稿状态 |
+| data.list[].isDeleted | Integer | 删除标记 |
+| data.list[].updatedAt | DateTime | 更新时间 |
+| data.total | Long | 总记录数 |
+| data.pageNum | Integer | 当前页码 |
+| data.pageSize | Integer | 每页数量 |
+| data.totalPages | Integer | 总页数 |
+
+### 响应示例
+
+#### 成功响应
+```json
+{
+  "code": 20201,
+  "msg": "操作成功",
+  "data": {
+    "list": [
+      {
+        "id": 1,
+        "userId": 1,
+        "categoryId": 1,
+        "title": "Spring Boot 入门教程",
+        "summary": "本文介绍 Spring Boot 的基础知识...",
+        "isTop": 1,
+        "isDraft": 0,
+        "isDeleted": 0,
+        "updatedAt": "2026-03-25T14:30:00"
+      }
+    ],
+    "total": 1,
+    "pageNum": 1,
+    "pageSize": 10,
+    "totalPages": 1
+  }
+}
+```
+
+#### 失败响应（文章不存在）
+```json
+{
+  "code": 40201,
+  "msg": "文章不存在",
+  "data": null
+}
+```
+
+#### 失败响应（无权访问）
+```json
+{
+  "code": 40203,
+  "msg": "无权访问文章",
+  "data": null
+}
+```
+
+---
+
+## 3.8 获取文章详情
 
 ### 基本信息
 - **接口名称**: 获取文章详情
@@ -1395,6 +1490,6 @@ Token 有效期由 JWT 配置决定，过期后需要重新登录。
 
 ---
 
-**文档版本**: v5.0  
+**文档版本**: v6.0  
 **最后更新**: 2026-03-25  
 **技术栈**: Spring Boot 4.0.3 + Spring Security + JPA + MySQL + JWT (JJWT 0.11.5)

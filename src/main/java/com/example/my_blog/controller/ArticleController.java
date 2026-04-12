@@ -5,6 +5,7 @@ import com.example.my_blog.dto.CreateArticleRequest;
 import com.example.my_blog.dto.ArticleListRequest;
 import com.example.my_blog.dto.UpdateArticleTopRequest;
 import com.example.my_blog.dto.UpdateArticleDraftRequest;
+import com.example.my_blog.dto.ArticleStatusRequest;
 import com.example.my_blog.service.ArticleService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -99,7 +100,7 @@ public class ArticleController {
      * @param request HTTP 请求（用于获取当前登录用户 ID）
      * @return 删除结果 JSON
      */
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/delete/{id}")
     public Object deleteArticle(@PathVariable Long id, HttpServletRequest request) {
         // 从 request 上下文中获取当前登录用户 ID（由拦截器设置）
         Long currentUserId = (Long) request.getAttribute("userId");
@@ -181,5 +182,27 @@ public class ArticleController {
     public Object getArticleDetail(@PathVariable Long id) {
         log.info("收到获取文章详情请求，文章 ID：{}", id);
         return articleService.getArticleDetail(id);
+    }
+    
+    /**
+     * 分页查询文章状态接口（需要登录）
+     * @param request 文章状态查询请求体（包含 articleId、isDraft、isDeleted（可选）、pageNum、pageSize）
+     * @param httpServletRequest HTTP 请求（用于获取当前登录用户 ID）
+     * @return 文章状态列表 JSON
+     */
+    @PostMapping("/status")
+    public Object getArticleStatus(@Valid @RequestBody ArticleStatusRequest request,
+                                   HttpServletRequest httpServletRequest) {
+        // 从 request 上下文中获取当前登录用户 ID（由拦截器设置）
+        Long currentUserId = (Long) httpServletRequest.getAttribute("userId");
+        log.info("收到查询文章状态请求，文章 ID：{}，当前用户 ID：{}，页码：{}，每页数量：{}", 
+                 request.getArticleId(), currentUserId, request.getPageNum(), request.getPageSize());
+        
+        if (currentUserId == null) {
+            log.error("用户 ID 为 null，请检查是否携带有效的 Token");
+            return ApiResponse.error("请先登录");
+        }
+        
+        return articleService.getArticleStatus(request, currentUserId);
     }
 }

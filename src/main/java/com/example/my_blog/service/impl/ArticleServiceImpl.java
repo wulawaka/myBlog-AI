@@ -9,6 +9,7 @@ import com.example.my_blog.dto.ArticleListItem;
 import com.example.my_blog.dto.SubCategoryInfo;
 import com.example.my_blog.dto.UpdateArticleTopRequest;
 import com.example.my_blog.dto.UpdateArticleDraftRequest;
+import com.example.my_blog.dto.ArticleStatusRequest;
 import com.example.my_blog.entity.Article;
 import com.example.my_blog.entity.User;
 import com.example.my_blog.entity.Category;
@@ -22,7 +23,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import jakarta.persistence.criteria.Predicate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -445,7 +449,7 @@ public class ArticleServiceImpl implements ArticleService {
             articleRepository.save(article);
 
             log.info("文章 {} 被用户 {} 删除", article.getTitle(), currentUserId);
-            return ApiResponse.success(null);
+            return ApiResponse.custom(ArticleErrorCode.SUCCESS, "操作成功", null);
 
         } catch (Exception e) {
             log.error("删除文章异常", e);
@@ -627,6 +631,87 @@ public class ArticleServiceImpl implements ArticleService {
         } catch (Exception e) {
             log.error("获取文章详情异常", e);
             return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "获取文章详情失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public Object getArticleStatus(ArticleStatusRequest request, Long currentUserId) {
+        try {
+            log.info("收到查询文章状态请求，文章 ID：{}，用户 ID：{}，草稿状态：{}，删除状态：{}", 
+                     request.getArticleId(), currentUserId, request.getIsDraft(), request.getIsDeleted());
+            
+            // 如果传入了 articleId，验证文章是否存在且属于当前用户
+            if (request.getArticleId() != null) {
+                Article article = articleRepository.findByIdAndUserId(request.getArticleId(), currentUserId);
+                
+                if (article == null) {
+                    log.warn("文章不存在或无权访问，文章 ID：{}，用户 ID：{}", request.getArticleId(), currentUserId);
+                    return ApiResponse.error(ArticleErrorCode.ARTICLE_NOT_FOUND, "文章不存在或无权访问");
+                }
+                
+                log.info("文章 {} 存在且属于用户 {}，继续查询状态", request.getArticleId(), currentUserId);
+            }
+            
+            // 创建分页对象
+            PageRequest pageRequest = PageRequest.of(
+                request.getPageNum() - 1, 
+                request.getPageSize()
+            );
+            
+            // 使用 Specification 动态构建查询条件
+            Specification<Article> spec = (root, query, cb) -> {
+                List<Predicate> predicates = new ArrayList<>();
+                
+                // 必填：用户 ID
+                predicates.add(cb.equal(root.get("userId"), currentUserId));
+                
+                // 可选：文章 ID
+                if (request.getArticleId() != null) {
+                    predicates.add(cb.equal(root.get("id"), request.getArticleId()));
+                }
+                
+                // 可选：草稿状态
+                if (request.getIsDraft() != null) {
+                    predicates.add(cb.equal(root.get("isDraft"), request.getIsDraft()));
+                }
+                
+                // 可选：删除状态
+                if (request.getIsDeleted() != null) {
+                    predicates.add(cb.equal(root.get("isDeleted"), request.getIsDeleted()));
+                }
+                
+                // 排序：按更新时间倒序
+                query.orderBy(cb.desc(root.get("updatedAt")));
+                
+                return cb.and(predicates.toArray(new Predicate[0]));
+            };
+            
+            // 根据动态条件分页查询文章
+            Page<Article> articlePage = articleRepository.findAll(spec, pageRequest);
+            
+            log.info("查询结果：总记录数 {}，总页数 {}，当前页码 {}，每页数量 {}", 
+                     articlePage.getTotalElements(), articlePage.getTotalPages(), 
+                     request.getPageNum(), request.getPageSize());
+            
+            // 构建返回结果
+            List<ArticleListItem> list = articlePage.getContent().stream()
+                    .map(this::convertToArticleListItem)
+                    .collect(Collectors.toList());
+            
+            // 构建分页响应
+            Map<String, Object> result = new HashMap<>();
+            result.put("list", list);
+            result.put("total", articlePage.getTotalElements());
+            result.put("pageNum", request.getPageNum());
+            result.put("pageSize", request.getPageSize());
+            result.put("totalPages", articlePage.getTotalPages());
+            
+            log.info("文章状态查询成功，共查询到 {} 篇文章", list.size());
+            return ApiResponse.custom(ArticleErrorCode.SUCCESS, "操作成功", result);
+            
+        } catch (Exception e) {
+            log.error("查询文章状态异常", e);
+            return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "查询文章状态失败：" + e.getMessage());
         }
     }
 }

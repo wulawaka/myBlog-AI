@@ -4,6 +4,7 @@ import com.example.my_blog.dto.CreateArticleRequest;
 import com.example.my_blog.dto.ArticleListRequest;
 import com.example.my_blog.dto.UpdateArticleTopRequest;
 import com.example.my_blog.dto.UpdateArticleDraftRequest;
+import com.example.my_blog.dto.ArticleStatusRequest;
 
 /**
  * 文章服务接口
@@ -39,4 +40,9 @@ public interface ArticleService {
      * 获取文章详情（无需登录）
      */
     Object getArticleDetail(Long id);
+    
+    /**
+     * 分页查询文章状态（需要登录）
+     */
+    Object getArticleStatus(ArticleStatusRequest request, Long currentUserId);
 }

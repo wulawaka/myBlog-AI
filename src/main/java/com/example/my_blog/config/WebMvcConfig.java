@@ -24,10 +24,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/article/my-list",
                         "/api/article/top",
                         "/api/article/draft",
+                        "/api/article/status",  // 查询文章状态需要登录
                         "/api/category/main-tag",
                         "/api/category/sub-tag",
                         "/api/category/tag",
-                        "/api/category/change-tag-name"  // 更新主标签需要登录
+                        "/api/category/change-tag-name",  // 更新主标签需要登录
+                        "/api/article/delete/{id}"
                 )
                 .excludePathPatterns(
                         "/api/article/list",
