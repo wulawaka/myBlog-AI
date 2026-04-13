@@ -233,4 +233,18 @@ public class ArticleController {
         log.info("收到恢复文章请求，文章 ID：{}，当前用户 ID：{}", id, currentUserId);
         return articleService.restoreArticle(id, currentUserId);
     }
+    
+    /**
+     * 分页获取置顶文章列表接口（无需登录）
+     * @param pageNum 页码（可选，默认 1）
+     * @param pageSize 每页数量（可选，默认 10）
+     * @return 置顶文章列表 JSON
+     */
+    @GetMapping("/top-list")
+    public Object getTopArticles(
+            @RequestParam(value = "pageNum", required = false) Integer pageNum,
+            @RequestParam(value = "pageSize", required = false) Integer pageSize) {
+        log.info("收到获取置顶文章列表请求，页码：{}，每页数量：{}", pageNum, pageSize);
+        return articleService.getTopArticles(pageNum, pageSize);
+    }
 }

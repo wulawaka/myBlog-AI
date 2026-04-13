@@ -27,7 +27,8 @@
   - [3.7 分页查询文章状态](#37-分页查询文章状态)
   - [3.8 物理删除文章](#38-物理删除文章)
   - [3.9 恢复文章](#39-恢复文章)
-  - [3.10 获取文章详情](#310-获取文章详情)
+  - [3.10 获取置顶文章列表](#310-获取置顶文章列表)
+  - [3.11 获取文章详情](#311-获取文章详情)
 - [四、数据结构说明](#四数据结构说明)
 - [五、错误码说明](#五错误码说明)
 
@@ -1336,7 +1337,96 @@
 
 ---
 
-## 3.10 获取文章详情
+## 3.10 获取置顶文章列表
+
+### 基本信息
+- **接口名称**: 获取置顶文章列表
+- **请求方法**: GET
+- **请求路径**: `/api/article/top-list`
+- **功能描述**: 分页获取所有置顶文章的列表（无需登录）
+
+### 请求参数
+
+#### Query 参数
+
+| 字段名 | 类型 | 必填 | 示例值 | 说明 |
+|--------|------|------|--------|------|
+| pageNum | Integer | 否 | `1` | 页码，默认 1 |
+| pageSize | Integer | 否 | `10` | 每页数量，默认 10 |
+
+### 响应参数
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| code | Integer | 业务状态码（5 位数） |
+| msg | String | 响应消息 |
+| data | Object | 响应数据 |
+| data.list | Array | 置顶文章列表 |
+| data.list[].id | Long | 文章 ID |
+| data.list[].userId | Long | 用户 ID |
+| data.list[].categoryId | Long | 主分类 ID |
+| data.list[].title | String | 文章标题 |
+| data.list[].summary | String | 文章概述 |
+| data.list[].isTop | Integer | 置顶状态（固定为 1） |
+| data.list[].updatedAt | DateTime | 更新时间 |
+| data.list[].username | String | 作者用户名 |
+| data.list[].categoryName | String | 分类名称 |
+| data.list[].subCategories | Array | 子标签列表 |
+| data.list[].subCategories[].id | Long | 子标签 ID |
+| data.list[].subCategories[].name | String | 子标签名称 |
+| data.total | Long | 总记录数 |
+| data.pageNum | Integer | 当前页码 |
+| data.pageSize | Integer | 每页数量 |
+| data.totalPages | Integer | 总页数 |
+
+### 数据结构说明
+
+**SubCategoryInfo（子标签信息）**:
+- `id`: 子标签 ID
+- `name`: 子标签名称
+
+### 响应示例
+
+#### 成功响应
+```json
+{
+  "code": 20201,
+  "msg": "操作成功",
+  "data": {
+    "list": [
+      {
+        "id": 1,
+        "userId": 1,
+        "categoryId": 1,
+        "title": "Spring Boot 入门教程",
+        "summary": "本文介绍 Spring Boot 的基础知识...",
+        "isTop": 1,
+        "updatedAt": "2026-03-25T14:30:00",
+        "username": "admin",
+        "categoryName": "Java",
+        "subCategories": [
+          {
+            "id": 2,
+            "name": "Spring"
+          },
+          {
+            "id": 3,
+            "name": "MyBatis"
+          }
+        ]
+      }
+    ],
+    "total": 5,
+    "pageNum": 1,
+    "pageSize": 10,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
+## 3.11 获取文章详情
 
 ### 基本信息
 - **接口名称**: 获取文章详情
@@ -1617,6 +1707,6 @@ Token 有效期由 JWT 配置决定，过期后需要重新登录。
 
 ---
 
-**文档版本**: v8.0  
+**文档版本**: v9.0  
 **最后更新**: 2026-03-25  
 **技术栈**: Spring Boot 4.0.3 + Spring Security + JPA + MySQL + JWT (JJWT 0.11.5)

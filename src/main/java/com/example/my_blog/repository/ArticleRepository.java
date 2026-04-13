@@ -98,4 +98,9 @@ public interface ArticleRepository extends JpaRepository<Article, Long>, JpaSpec
      * 根据用户 ID 和文章 ID 查询文章（用于物理删除前的校验）
      */
     Optional<Article> findByUserIdAndId(Long userId, Long id);
+    
+    /**
+     * 分页查询置顶且未删除、已发布的文章
+     */
+    Page<Article> findByIsTopAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(Integer isTop, Integer isDeleted, Integer isDraft, Pageable pageable);
 }

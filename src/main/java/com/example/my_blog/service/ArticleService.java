@@ -55,4 +55,9 @@ public interface ArticleService {
      * 恢复文章（将 is_deleted 设为 0，需要登录）
      */
     Object restoreArticle(Long articleId, Long currentUserId);
+    
+    /**
+     * 分页获取置顶文章列表（无需登录）
+     */
+    Object getTopArticles(Integer pageNum, Integer pageSize);
 }

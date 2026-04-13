@@ -786,4 +786,43 @@ public class ArticleServiceImpl implements ArticleService {
             return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "恢复文章失败：" + e.getMessage());
         }
     }
+
+    @Override
+    public Object getTopArticles(Integer pageNum, Integer pageSize) {
+        try {
+            // 处理默认值
+            if (pageNum == null || pageNum < 1) pageNum = 1;
+            if (pageSize == null || pageSize < 1) pageSize = 10;
+            
+            log.info("收到获取置顶文章列表请求，页码：{}，每页数量：{}", pageNum, pageSize);
+            
+            // 创建分页对象
+            PageRequest pageRequest = PageRequest.of(pageNum - 1, pageSize);
+            
+            // 查询置顶、未删除且已发布的文章（按更新时间倒序）
+            Page<Article> articlePage = articleRepository.findByIsTopAndIsDeletedAndIsDraftOrderByUpdatedAtDesc(
+                1, 0, 0, pageRequest
+            );
+            
+            // 构建返回结果
+            List<ArticleListItem> list = articlePage.getContent().stream()
+                    .map(this::convertToArticleListItem)
+                    .collect(Collectors.toList());
+            
+            // 构建分页响应
+            Map<String, Object> result = new HashMap<>();
+            result.put("list", list);
+            result.put("total", articlePage.getTotalElements());
+            result.put("pageNum", pageNum);
+            result.put("pageSize", pageSize);
+            result.put("totalPages", articlePage.getTotalPages());
+            
+            log.info("置顶文章列表查询成功，共查询到 {} 篇文章", list.size());
+            return ApiResponse.custom(ArticleErrorCode.SUCCESS, "操作成功", result);
+            
+        } catch (Exception e) {
+            log.error("获取置顶文章列表异常", e);
+            return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "获取置顶文章列表失败：" + e.getMessage());
+        }
+    }
 }
