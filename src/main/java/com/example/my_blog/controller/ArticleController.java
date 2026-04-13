@@ -205,4 +205,18 @@ public class ArticleController {
         
         return articleService.getArticleStatus(request, currentUserId);
     }
+    
+    /**
+     * 物理删除文章接口（彻底删除，需要登录）
+     * @param id 文章 ID（路径参数）
+     * @param request HTTP 请求（用于获取当前登录用户 ID）
+     * @return 删除结果 JSON
+     */
+    @DeleteMapping("/permanent/{id}")
+    public Object permanentDeleteArticle(@PathVariable Long id, HttpServletRequest request) {
+        // 从 request 上下文中获取当前登录用户 ID（由拦截器设置）
+        Long currentUserId = (Long) request.getAttribute("userId");
+        log.info("收到物理删除文章请求，文章 ID：{}，当前用户 ID：{}", id, currentUserId);
+        return articleService.permanentDeleteArticle(id, currentUserId);
+    }
 }

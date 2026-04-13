@@ -41,4 +41,9 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
      * 根据父ID和删除状态查找分类
      */
     List<Category> findByParentIdAndIsDeletedOrderByCreatedAtDesc(Long parentId, Integer isDeleted);
+    
+    /**
+     * 统计指定父标签下未删除的子标签数量
+     */
+    long countByParentIdAndIsDeleted(Long parentId, Integer isDeleted);
 }

@@ -26,6 +26,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -712,6 +713,45 @@ public class ArticleServiceImpl implements ArticleService {
         } catch (Exception e) {
             log.error("查询文章状态异常", e);
             return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "查询文章状态失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public Object permanentDeleteArticle(Long articleId, Long currentUserId) {
+        try {
+            log.info("收到物理删除文章请求，文章 ID：{}，用户 ID：{}", articleId, currentUserId);
+            
+            // 1. 校验权限并获取文章（确保文章属于当前用户）
+            Optional<Article> articleOptional = articleRepository.findByUserIdAndId(currentUserId, articleId);
+            
+            if (articleOptional.isEmpty()) {
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_NOT_FOUND, "文章不存在或无权操作");
+            }
+
+            Article article = articleOptional.get();
+            
+            // 2. 状态检查：必须是已软删除的文章 (is_deleted = 1)
+            if (article.getIsDeleted() != 1) {
+                return ApiResponse.error(ArticleErrorCode.INVALID_PARAM, "只能彻底删除回收站中的文章");
+            }
+
+            // 3. 删除关联数据：先删除 article_category_relation 表中的记录
+            List<ArticleCategoryRelation> relations = articleCategoryRelationRepository.findByArticleId(articleId);
+            if (!relations.isEmpty()) {
+                articleCategoryRelationRepository.deleteAll(relations);
+                log.info("已清除文章 {} 的 {} 条标签关联记录", articleId, relations.size());
+            }
+
+            // 4. 物理删除文章实体
+            articleRepository.delete(article);
+            
+            log.info("文章 {} 已被用户 {} 彻底物理删除", article.getTitle(), currentUserId);
+            return ApiResponse.custom(ArticleErrorCode.SUCCESS, "操作成功", null);
+
+        } catch (Exception e) {
+            log.error("物理删除文章异常", e);
+            return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "物理删除文章失败：" + e.getMessage());
         }
     }
 }

@@ -8,6 +8,8 @@ import com.example.my_blog.dto.DeleteTagRequest;
 import com.example.my_blog.dto.TagTreeNode;
 import com.example.my_blog.dto.UpdateMainTagRequest;
 import com.example.my_blog.entity.Category;
+import com.example.my_blog.repository.ArticleCategoryRelationRepository;
+import com.example.my_blog.repository.ArticleRepository;
 import com.example.my_blog.repository.CategoryRepository;
 import com.example.my_blog.service.CategoryService;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,8 @@ import java.util.stream.Collectors;
 public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final ArticleRepository articleRepository;
+    private final ArticleCategoryRelationRepository relationRepository;
 
     @Override
     public Object createMainTag(CreateMainTagRequest request) {
@@ -125,19 +129,16 @@ public class CategoryServiceImpl implements CategoryService {
     
             // 判断是否为主标签 (parentId = 0)
             if (parentId == 0) {
-                // 检查是否有子标签引用此主标签
-                List<Category> childCategories = categoryRepository.findByParentId(categoryId);
-                    
-                if (!childCategories.isEmpty()) {
-                    // 检查子标签中是否有未删除的 (isDeleted = 0)
-                    boolean hasActiveChild = childCategories.stream()
-                            .anyMatch(child -> child.getIsDeleted() == 0);
-                        
-                    if (hasActiveChild) {
-                        // 存在未删除的子标签，无法删除主标签
-                        return ApiResponse.error(CategoryErrorCode.HAS_ACTIVE_CHILD_TAGS, "该主标签下存在未删除的子标签，无法删除");
-                    }
-                    // 所有子标签都已删除，可以删除主标签
+                // 1. 检查是否有未删除的子标签
+                long activeChildCount = categoryRepository.countByParentIdAndIsDeleted(categoryId, 0);
+                if (activeChildCount > 0) {
+                    return ApiResponse.error(CategoryErrorCode.HAS_ACTIVE_CHILD_TAGS, "该主标签下存在未删除的子标签，无法删除");
+                }
+                
+                // 2. 检查是否有文章引用此主标签
+                boolean isArticleReferenced = articleRepository.existsByCategoryIdAndIsDeleted(categoryId, 0);
+                if (isArticleReferenced) {
+                    return ApiResponse.error(CategoryErrorCode.HAS_ACTIVE_CHILD_TAGS, "该主标签已被文章引用，无法删除");
                 }
                     
                 // 可以删除，设置 isDeleted = 1
@@ -148,7 +149,13 @@ public class CategoryServiceImpl implements CategoryService {
                 return ApiResponse.success("主标签删除成功");
                     
             } else {
-                // 小标签，直接删除
+                // 小标签，检查是否在关联表中被引用
+                boolean isRelationReferenced = relationRepository.existsByCategoryId(categoryId);
+                if (isRelationReferenced) {
+                    return ApiResponse.error(CategoryErrorCode.HAS_ACTIVE_CHILD_TAGS, "该子标签已被文章引用，无法删除");
+                }
+                
+                // 直接删除
                 category.setIsDeleted(1);
                 categoryRepository.save(category);
                     

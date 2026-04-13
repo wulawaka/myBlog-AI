@@ -45,4 +45,9 @@ public interface ArticleService {
      * 分页查询文章状态（需要登录）
      */
     Object getArticleStatus(ArticleStatusRequest request, Long currentUserId);
+    
+    /**
+     * 物理删除文章（彻底删除，需要登录且仅允许删除已软删除的文章）
+     */
+    Object permanentDeleteArticle(Long articleId, Long currentUserId);
 }

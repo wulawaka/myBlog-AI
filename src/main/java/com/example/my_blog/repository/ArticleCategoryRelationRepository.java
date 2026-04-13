@@ -32,4 +32,9 @@ public interface ArticleCategoryRelationRepository extends JpaRepository<Article
         @Param("articleIds") List<Long> articleIds,
         @Param("subCategoryIds") List<Long> subCategoryIds
     );
+    
+    /**
+     * 检查指定分类 ID 是否存在关联记录
+     */
+    boolean existsByCategoryId(Long categoryId);
 }
