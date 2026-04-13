@@ -754,4 +754,36 @@ public class ArticleServiceImpl implements ArticleService {
             return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "物理删除文章失败：" + e.getMessage());
         }
     }
+
+    @Override
+    public Object restoreArticle(Long articleId, Long currentUserId) {
+        try {
+            log.info("收到恢复文章请求，文章 ID：{}，用户 ID：{}", articleId, currentUserId);
+            
+            // 1. 校验权限并获取文章（确保文章属于当前用户）
+            Optional<Article> articleOptional = articleRepository.findByUserIdAndId(currentUserId, articleId);
+            
+            if (articleOptional.isEmpty()) {
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_NOT_FOUND, "文章不存在或无权操作");
+            }
+
+            Article article = articleOptional.get();
+            
+            // 2. 状态检查：必须是已软删除的文章 (is_deleted = 1) 才能恢复
+            if (article.getIsDeleted() != 1) {
+                return ApiResponse.error(ArticleErrorCode.INVALID_PARAM, "该文章未被删除，无需恢复");
+            }
+
+            // 3. 执行恢复：将 is_deleted 设为 0
+            article.setIsDeleted(0);
+            articleRepository.save(article);
+            
+            log.info("文章 {} 已被用户 {} 恢复", article.getTitle(), currentUserId);
+            return ApiResponse.custom(ArticleErrorCode.SUCCESS, "操作成功", null);
+
+        } catch (Exception e) {
+            log.error("恢复文章异常", e);
+            return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "恢复文章失败：" + e.getMessage());
+        }
+    }
 }

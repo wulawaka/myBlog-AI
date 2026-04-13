@@ -30,7 +30,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/category/tag",
                         "/api/category/change-tag-name",  // 更新主标签需要登录
                         "/api/article/delete/{id}",
-                        "/api/article/permanent/{id}"  // 物理删除文章需要登录
+                        "/api/article/permanent/{id}",  // 物理删除文章需要登录
+                        "/api/article/restore/{id}"  // 恢复文章需要登录
                 )
                 .excludePathPatterns(
                         "/api/article/list",

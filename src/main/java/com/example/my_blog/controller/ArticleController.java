@@ -219,4 +219,18 @@ public class ArticleController {
         log.info("收到物理删除文章请求，文章 ID：{}，当前用户 ID：{}", id, currentUserId);
         return articleService.permanentDeleteArticle(id, currentUserId);
     }
+    
+    /**
+     * 恢复文章接口（将 is_deleted 设为 0，需要登录）
+     * @param id 文章 ID（路径参数）
+     * @param request HTTP 请求（用于获取当前登录用户 ID）
+     * @return 恢复结果 JSON
+     */
+    @PutMapping("/restore/{id}")
+    public Object restoreArticle(@PathVariable Long id, HttpServletRequest request) {
+        // 从 request 上下文中获取当前登录用户 ID（由拦截器设置）
+        Long currentUserId = (Long) request.getAttribute("userId");
+        log.info("收到恢复文章请求，文章 ID：{}，当前用户 ID：{}", id, currentUserId);
+        return articleService.restoreArticle(id, currentUserId);
+    }
 }

@@ -50,4 +50,9 @@ public interface ArticleService {
      * 物理删除文章（彻底删除，需要登录且仅允许删除已软删除的文章）
      */
     Object permanentDeleteArticle(Long articleId, Long currentUserId);
+    
+    /**
+     * 恢复文章（将 is_deleted 设为 0，需要登录）
+     */
+    Object restoreArticle(Long articleId, Long currentUserId);
 }
