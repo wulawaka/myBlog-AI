@@ -62,6 +62,11 @@ public class UserErrorCode {
      */
     public static final int TOKEN_INVALID = 40109;
     
+    /**
+     * 账户已被锁定（登录失败次数过多）
+     */
+    public static final int ACCOUNT_LOCKED = 40110;
+    
     // ==================== 服务端错误 (501XX) ====================
     /**
      * 服务器内部错误

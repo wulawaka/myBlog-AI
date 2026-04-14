@@ -37,7 +37,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/article/list",
                         "/api/user/login",
                         "/api/user/register",
-                        "/api/category/tags/tree"
+                        "/api/category/tags/tree",
+                        "/api/oss/**"  // 放行 OSS 相关接口
                 );
     }
 }

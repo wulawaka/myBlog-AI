@@ -29,8 +29,10 @@
   - [3.9 恢复文章](#39-恢复文章)
   - [3.10 获取置顶文章列表](#310-获取置顶文章列表)
   - [3.11 获取文章详情](#311-获取文章详情)
-- [四、数据结构说明](#四数据结构说明)
-- [五、错误码说明](#五错误码说明)
+- [四、OSS 模块 (OssController)](#四oss-模块-osscontroller)
+  - [4.1 获取 OSS 上传凭证](#41-获取-oss-上传凭证)
+- [五、数据结构说明](#五数据结构说明)
+- [六、错误码说明](#六错误码说明)
 
 ---
 
@@ -1518,7 +1520,73 @@
 
 ---
 
-# 四、数据结构说明
+# 四、OSS 模块 (OssController)
+
+**基础路径**: `/api/oss`
+
+## 4.1 获取 OSS 上传凭证
+
+### 基本信息
+- **接口名称**: 获取 OSS 上传凭证
+- **请求方法**: GET
+- **请求路径**: `/api/oss/upload-policy`
+- **功能描述**: 获取阿里云 OSS 的上传凭证，用于前端直传文件到 OSS（无需登录）
+
+### 请求参数
+
+无
+
+### 响应参数
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| code | Integer | 业务状态码（5 位数） |
+| msg | String | 响应消息 |
+| data | Object | 响应数据 |
+| data.accessKeyId | String | AccessKey ID |
+| data.policy | String | Base64 编码的策略字符串 |
+| data.signature | String | 签名 |
+| data.dir | String | 上传目录前缀 |
+| data.host | String | OSS 服务器地址 |
+| data.expire | String | 凭证过期时间（秒） |
+
+### 响应示例
+
+#### 成功响应
+```json
+{
+  "code": 20101,
+  "msg": "操作成功",
+  "data": {
+    "accessKeyId": "LTAI5t...",
+    "policy": "eyJleHBpcmF0aW9uIjoiMjAyNi0wMy0yNVQxNTozMDowMFoiLCJjb25kaXRpb25zIjpbWyJzdGFydHMtd2l0aCIsIiRrZXkiLCJ1cGxvYWQvIl1dfQ==",
+    "signature": "abc123def456...",
+    "dir": "upload/",
+    "host": "https://your-bucket.oss-cn-hangzhou.aliyuncs.com",
+    "expire": "1711353000"
+  }
+}
+```
+
+#### 失败响应
+```json
+{
+  "code": 50101,
+  "msg": "获取上传凭证失败：配置错误",
+  "data": null
+}
+```
+
+### 使用说明
+
+1. 前端调用此接口获取上传凭证
+2. 使用返回的凭证信息，通过 OSS SDK 或表单直传方式上传文件
+3. 上传时需在文件名前加上 `dir` 前缀
+4. 凭证有过期时间，过期后需重新获取
+
+---
+
+# 五、数据结构说明
 
 ## DTO 数据结构
 
@@ -1559,7 +1627,7 @@
 
 ---
 
-# 五、错误码说明
+# 六、错误码说明
 
 ## 错误码格式规范
 
@@ -1707,6 +1775,6 @@ Token 有效期由 JWT 配置决定，过期后需要重新登录。
 
 ---
 
-**文档版本**: v9.0  
+**文档版本**: v10.0  
 **最后更新**: 2026-03-25  
 **技术栈**: Spring Boot 4.0.3 + Spring Security + JPA + MySQL + JWT (JJWT 0.11.5)

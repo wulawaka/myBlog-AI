@@ -8,6 +8,7 @@ import com.example.my_blog.dto.ChangePasswordRequest;
 import com.example.my_blog.entity.User;
 import com.example.my_blog.repository.UserRepository;
 import com.example.my_blog.service.UserService;
+import com.example.my_blog.service.LoginAttemptService;
 import com.example.my_blog.util.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
@@ -28,37 +29,63 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final LoginAttemptService loginAttemptService;
 
     @Override
     public Object login(LoginRequest loginRequest) {
+        String username = loginRequest.getUsername();
+        
         try {
-            // 查找用户
-            Optional<User> userOptional = userRepository.findByUsername(loginRequest.getUsername());
+            // 1. 检查账户是否被锁定
+            if (loginAttemptService.isLocked(username)) {
+                return ApiResponse.error(UserErrorCode.ACCOUNT_LOCKED, 
+                    "账户已被锁定，请稍后再试（登录失败次数过多）");
+            }
+            
+            // 2. 查找用户
+            Optional<User> userOptional = userRepository.findByUsername(username);
                 
             if (userOptional.isEmpty()) {
-                return ApiResponse.error(UserErrorCode.USER_NOT_FOUND, "用户不存在");
+                // 记录失败尝试
+                loginAttemptService.recordFailedAttempt(username);
+                int remaining = loginAttemptService.getRemainingAttempts(username);
+                return ApiResponse.error(UserErrorCode.USER_NOT_FOUND, 
+                    "用户不存在，剩余尝试次数：" + remaining);
             }
     
             User user = userOptional.get();
                 
-            // 使用BCrypt 校验密码
+            // 3. 使用BCrypt 校验密码
             try {
                 if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-                    return ApiResponse.error(UserErrorCode.CREDENTIAL_ERROR, "用户名或密码错误");
+                    // 记录失败尝试
+                    loginAttemptService.recordFailedAttempt(username);
+                    int remaining = loginAttemptService.getRemainingAttempts(username);
+                    
+                    if (remaining <= 0) {
+                        return ApiResponse.error(UserErrorCode.ACCOUNT_LOCKED, 
+                            "密码错误次数过多，账户已锁定 15 分钟");
+                    }
+                    
+                    return ApiResponse.error(UserErrorCode.CREDENTIAL_ERROR, 
+                        "用户名或密码错误，剩余尝试次数：" + remaining);
                 }
             } catch (Exception e) {
                 log.error("密码校验失败", e);
                 return ApiResponse.error(UserErrorCode.ENCRYPTION_ERROR, "密码校验失败");
             }
     
-            // 登录成功，返回用户信息（敏感信息不返回）
+            // 4. 登录成功，清除失败记录
+            loginAttemptService.clearAttempts(username);
+            
+            // 5. 返回用户信息（敏感信息不返回）
             Map<String, Object> userInfo = new HashMap<>();
             userInfo.put("id", user.getId());
             userInfo.put("username", user.getUsername());
             userInfo.put("nickname", user.getNickname());
             userInfo.put("email", user.getEmail());
                 
-            // 生成 JWT Token
+            // 6. 生成 JWT Token
             String token = jwtUtil.generateToken(user.getId(), user.getUsername());
     
             log.info("用户 {} 登录成功", user.getUsername());

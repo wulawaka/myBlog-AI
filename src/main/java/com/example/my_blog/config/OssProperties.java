@@ -1,0 +1,20 @@
+package com.example.my_blog.config;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+/**
+ * OSS 配置属性类
+ */
+@Data
+@Component
+@ConfigurationProperties(prefix = "oss")
+public class OssProperties {
+    private String endpoint;
+    private String bucketName;
+    private String accessKeyId;
+    private String accessKeySecret;
+    private String dirPrefix;
+    private Long expireTime;
+}
