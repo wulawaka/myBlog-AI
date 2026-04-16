@@ -21,6 +21,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns(
                         "/api/user/change-password",
                         "/api/user/logout",
+                        "/api/article",  // 创建和更新文章需要登录
                         "/api/article/my-list",
                         "/api/article/top",
                         "/api/article/draft",

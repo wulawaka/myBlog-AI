@@ -6,6 +6,7 @@ import com.example.my_blog.dto.ArticleListRequest;
 import com.example.my_blog.dto.UpdateArticleTopRequest;
 import com.example.my_blog.dto.UpdateArticleDraftRequest;
 import com.example.my_blog.dto.ArticleStatusRequest;
+import com.example.my_blog.dto.UpdateArticleRequest;
 import com.example.my_blog.service.ArticleService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -42,6 +43,28 @@ public class ArticleController {
     public Object createArticle(@Valid @RequestBody CreateArticleRequest request) {
         log.info("收到创建文章请求，标题：{}，用户 ID：{}", request.getTitle(), request.getUserId());
         return articleService.createArticle(request);
+    }
+    
+    /**
+     * 更新文章接口（需要登录）
+     * @param request 更新文章请求体（包含 articleId、categoryId、title、summary、content、isTop、isDraft、isDeleted、scategoryId）
+     * @param httpServletRequest HTTP 请求（用于获取当前登录用户 ID）
+     * @return 更新结果 JSON
+     */
+    @PutMapping
+    public Object updateArticle(@Valid @RequestBody UpdateArticleRequest request,
+                                HttpServletRequest httpServletRequest) {
+        // 从 request 上下文中获取当前登录用户 ID（由拦截器设置）
+        Long currentUserId = (Long) httpServletRequest.getAttribute("userId");
+        log.info("收到更新文章请求，文章 ID：{}，标题：{}，当前用户 ID：{}", 
+                 request.getArticleId(), request.getTitle(), currentUserId);
+        
+        if (currentUserId == null) {
+            log.error("用户 ID 为 null，请检查是否携带有效的 Token");
+            return ApiResponse.error("请先登录");
+        }
+        
+        return articleService.updateArticle(request, currentUserId);
     }
     
     /**

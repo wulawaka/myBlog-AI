@@ -10,6 +10,7 @@ import com.example.my_blog.dto.SubCategoryInfo;
 import com.example.my_blog.dto.UpdateArticleTopRequest;
 import com.example.my_blog.dto.UpdateArticleDraftRequest;
 import com.example.my_blog.dto.ArticleStatusRequest;
+import com.example.my_blog.dto.UpdateArticleRequest;
 import com.example.my_blog.entity.Article;
 import com.example.my_blog.entity.User;
 import com.example.my_blog.entity.Category;
@@ -85,34 +86,40 @@ public class ArticleServiceImpl implements ArticleService {
             if (request.getScategoryId() != null && !request.getScategoryId().trim().isEmpty()) {
                 String[] subCategoryIds = request.getScategoryId().split(",");
                 
-                if (subCategoryIds.length > 5) {
-                    return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_COUNT_EXCEEDED, "子标签数量不能超过 5 个");
-                }
-                
+                // 去重处理，防止前端传入重复的 ID
+                List<Long> uniqueSubCategoryIds = new ArrayList<>();
                 for (String subCategoryIdStr : subCategoryIds) {
                     try {
                         Long subCategoryId = Long.parseLong(subCategoryIdStr.trim());
-                        
-                        // 验证子标签是否存在且为有效子标签（parent_id != 0）
-                        Optional<Category> subCategoryOptional = categoryRepository.findById(subCategoryId);
-                        if (subCategoryOptional.isEmpty()) {
-                            return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_NOT_FOUND, "子标签不存在，ID: " + subCategoryId);
+                        if (!uniqueSubCategoryIds.contains(subCategoryId)) {
+                            uniqueSubCategoryIds.add(subCategoryId);
                         }
-                        
-                        Category subCategory = subCategoryOptional.get();
-                        if (subCategory.getParentId().equals(0L)) {
-                            return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_CANNOT_BE_MAIN, "子标签不能是主标签，ID: " + subCategoryId);
-                        }
-                        
-                        // 创建关联关系
-                        ArticleCategoryRelation relation = new ArticleCategoryRelation();
-                        relation.setArticleId(savedArticle.getId());
-                        relation.setCategoryId(subCategoryId);
-                        articleCategoryRelationRepository.save(relation);
-                        
                     } catch (NumberFormatException e) {
                         return ApiResponse.error("子标签ID 格式不正确：" + subCategoryIdStr);
                     }
+                }
+                
+                if (uniqueSubCategoryIds.size() > 5) {
+                    return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_COUNT_EXCEEDED, "子标签数量不能超过 5 个");
+                }
+                
+                for (Long subCategoryId : uniqueSubCategoryIds) {
+                    // 验证子标签是否存在且为有效子标签（parent_id != 0）
+                    Optional<Category> subCategoryOptional = categoryRepository.findById(subCategoryId);
+                    if (subCategoryOptional.isEmpty()) {
+                        return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_NOT_FOUND, "子标签不存在，ID: " + subCategoryId);
+                    }
+                    
+                    Category subCategory = subCategoryOptional.get();
+                    if (subCategory.getParentId().equals(0L)) {
+                        return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_CANNOT_BE_MAIN, "子标签不能是主标签，ID: " + subCategoryId);
+                    }
+                    
+                    // 创建关联关系
+                    ArticleCategoryRelation relation = new ArticleCategoryRelation();
+                    relation.setArticleId(savedArticle.getId());
+                    relation.setCategoryId(subCategoryId);
+                    articleCategoryRelationRepository.save(relation);
                 }
             }
 
@@ -125,6 +132,105 @@ public class ArticleServiceImpl implements ArticleService {
         } catch (Exception e) {
             log.error("创建文章异常", e);
             return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "创建文章失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public Object updateArticle(UpdateArticleRequest request, Long currentUserId) {
+        try {
+            // 1. 查询文章是否存在
+            Optional<Article> articleOptional = articleRepository.findById(request.getArticleId());
+            if (articleOptional.isEmpty()) {
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_NOT_FOUND, "文章不存在");
+            }
+            
+            Article article = articleOptional.get();
+            
+            // 2. 权限校验：只有文章作者可以更新
+            if (!article.getUserId().equals(currentUserId)) {
+                return ApiResponse.error(ArticleErrorCode.ARTICLE_UNAUTHORIZED, "无权更新此文章");
+            }
+            
+            // 3. 验证分类 ID 是否存在且为主标签（parent_id = 0）
+            Optional<Category> categoryOptional = categoryRepository.findById(request.getCategoryId());
+            if (categoryOptional.isEmpty()) {
+                return ApiResponse.error(ArticleErrorCode.CATEGORY_NOT_FOUND, "分类不存在");
+            }
+            
+            Category category = categoryOptional.get();
+            if (!category.getParentId().equals(0L)) {
+                return ApiResponse.error(ArticleErrorCode.CATEGORY_MUST_BE_MAIN, "分类必须是主标签");
+            }
+            
+            // 4. 更新文章基本信息
+            article.setCategoryId(request.getCategoryId());
+            article.setTitle(request.getTitle());
+            article.setSummary(request.getSummary());
+            article.setContent(request.getContent());
+            article.setIsTop(request.getIsTop() != null ? request.getIsTop() : 0);
+            article.setIsDraft(request.getIsDraft() != null ? request.getIsDraft() : 0);
+            article.setIsDeleted(request.getIsDeleted() != null ? request.getIsDeleted() : 0);
+            
+            // updatedAt 会通过 @PreUpdate 自动更新
+            Article updatedArticle = articleRepository.save(article);
+            
+            // 5. 处理子标签关联关系：先删除旧的，再添加新的
+            // 使用 @Modifying 查询直接执行 DELETE SQL，确保立即生效
+            articleCategoryRelationRepository.deleteByArticleId(updatedArticle.getId());
+            articleCategoryRelationRepository.flush(); // 强制刷新，确保删除立即生效
+            log.info("已删除文章 {} 的所有旧标签关联记录", updatedArticle.getId());
+            
+            if (request.getScategoryId() != null && !request.getScategoryId().trim().isEmpty()) {
+                String[] subCategoryIds = request.getScategoryId().split(",");
+                
+                // 去重处理，防止前端传入重复的 ID
+                List<Long> uniqueSubCategoryIds = new ArrayList<>();
+                for (String subCategoryIdStr : subCategoryIds) {
+                    try {
+                        Long subCategoryId = Long.parseLong(subCategoryIdStr.trim());
+                        if (!uniqueSubCategoryIds.contains(subCategoryId)) {
+                            uniqueSubCategoryIds.add(subCategoryId);
+                        }
+                    } catch (NumberFormatException e) {
+                        return ApiResponse.error("子标签ID 格式不正确：" + subCategoryIdStr);
+                    }
+                }
+                
+                if (uniqueSubCategoryIds.size() > 5) {
+                    return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_COUNT_EXCEEDED, "子标签数量不能超过 5 个");
+                }
+                
+                for (Long subCategoryId : uniqueSubCategoryIds) {
+                    // 验证子标签是否存在且为有效子标签（parent_id != 0）
+                    Optional<Category> subCategoryOptional = categoryRepository.findById(subCategoryId);
+                    if (subCategoryOptional.isEmpty()) {
+                        return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_NOT_FOUND, "子标签不存在，ID: " + subCategoryId);
+                    }
+                    
+                    Category subCategory = subCategoryOptional.get();
+                    if (subCategory.getParentId().equals(0L)) {
+                        return ApiResponse.error(ArticleErrorCode.SUB_CATEGORY_CANNOT_BE_MAIN, "子标签不能是主标签，ID: " + subCategoryId);
+                    }
+                    
+                    // 创建关联关系
+                    ArticleCategoryRelation relation = new ArticleCategoryRelation();
+                    relation.setArticleId(updatedArticle.getId());
+                    relation.setCategoryId(subCategoryId);
+                    articleCategoryRelationRepository.save(relation);
+                }
+            }
+            
+            // 6. 构建返回结果
+            Optional<User> userOptional = userRepository.findById(currentUserId);
+            ArticleResponse response = buildArticleResponse(updatedArticle, userOptional.get());
+            
+            log.info("文章 {} 更新成功，用户 ID：{}", updatedArticle.getTitle(), currentUserId);
+            return ApiResponse.custom(ArticleErrorCode.UPDATE_SUCCESS, "操作成功", response);
+            
+        } catch (Exception e) {
+            log.error("更新文章异常", e);
+            return ApiResponse.error(ArticleErrorCode.SERVER_ERROR, "更新文章失败：" + e.getMessage());
         }
     }
 

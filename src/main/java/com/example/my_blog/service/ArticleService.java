@@ -5,6 +5,7 @@ import com.example.my_blog.dto.ArticleListRequest;
 import com.example.my_blog.dto.UpdateArticleTopRequest;
 import com.example.my_blog.dto.UpdateArticleDraftRequest;
 import com.example.my_blog.dto.ArticleStatusRequest;
+import com.example.my_blog.dto.UpdateArticleRequest;
 
 /**
  * 文章服务接口
@@ -15,6 +16,11 @@ public interface ArticleService {
      * 创建文章
      */
     Object createArticle(CreateArticleRequest request);
+    
+    /**
+     * 更新文章
+     */
+    Object updateArticle(UpdateArticleRequest request, Long currentUserId);
     
     /**
      * 分页获取文章列表

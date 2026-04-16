@@ -67,6 +67,11 @@ public class ArticleErrorCode {
      */
     public static final int INVALID_TOP_STATUS = 40210;
     
+    /**
+     * 更新文章成功
+     */
+    public static final int UPDATE_SUCCESS = 20202;
+    
     // ==================== 服务端错误 (502XX) ====================
     /**
      * 服务器内部错误
